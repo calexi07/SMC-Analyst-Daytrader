@@ -921,3 +921,35 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
   .outcome-toggle  { grid-template-columns: 1fr 1fr; }
   .dash-grid       { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── SETUP EDIT BUTTON ── */
+.setup-edit {
+  font-size: 11px;
+  padding: 3px 8px;
+  color: #1a56db;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+}
+.setup-edit:hover { background: #dbeafe; color: #1e40af; }
+
+/* ── SETUP SUMMARY PILLS (in edit modal) ── */
+.setup-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px;
+  background: var(--surface2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.sum-pill {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 3px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  color: var(--text2);
+}
