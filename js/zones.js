@@ -136,7 +136,7 @@ const Zones = {
       </div>
       <div class="zone-comments" id="comments-${zone.id}">
         <div class="comments-header">
-          <span class="comments-title">Comments & Screenshots</span>
+          <span class="comments-title">Jobs</span>
         </div>
         <div class="comment-list" id="comment-list-${zone.id}">
           <div class="loader">Loading...</div>
