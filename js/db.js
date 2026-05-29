@@ -60,6 +60,17 @@ const DB = {
     return data;
   },
 
+  async updateComment(id, updates) {
+    const { data, error } = await db
+      .from("zone_comments")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) { console.error("updateComment:", error); return null; }
+    return data;
+  },
+
   async addComment(comment) {
     const { data, error } = await db
       .from('zone_comments')
