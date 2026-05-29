@@ -582,3 +582,47 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
   color: #fff;
 }
 .btn-status-update:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── DIRECTION BADGE ── */
+.zone-dir {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+.zone-dir.bull { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.zone-dir.bear { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+/* ── DIRECTION TOGGLE (modal) ── */
+.dir-toggle {
+  display: flex;
+  gap: 8px;
+}
+.dir-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid var(--border2);
+  background: var(--surface2);
+  color: var(--muted);
+  transition: all 0.15s;
+  text-align: center;
+}
+.dir-btn.bull.active { background: #ecfdf5; border-color: #059669; color: #059669; }
+.dir-btn.bear.active { background: #fef2f2; border-color: #dc2626; color: #dc2626; }
+.dir-btn:not(.active):hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── FORM HINT ── */
+.form-hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted2);
+  margin-top: 2px;
+}
