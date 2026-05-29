@@ -141,7 +141,7 @@ const Zones = {
         <div class="comment-list" id="comment-list-${zone.id}">
           <div class="loader">Loading...</div>
         </div>
-        <button class="btn-add-comment" data-zone="${zone.id}">+ Add Comment / Screenshot</button>
+        <button class="btn-add-setup" data-zone="${zone.id}">+ Log Setup</button>
       </div>
     `;
 
@@ -174,8 +174,8 @@ const Zones = {
       this.confirmDelete(zone);
     });
 
-    card.querySelector('.btn-add-comment').addEventListener('click', () => {
-      Comments.openModal(zone.id);
+    card.querySelector('.btn-add-setup').addEventListener('click', () => {
+      Setups.openModal(zone.id, zone.pair);
     });
 
     return card;
@@ -184,7 +184,7 @@ const Zones = {
   async toggleComments(card, zoneId) {
     const wasOpen = card.classList.contains('expanded');
     card.classList.toggle('expanded', !wasOpen);
-    if (!wasOpen) await Comments.loadComments(zoneId);
+    if (!wasOpen) await Setups.loadSetups(zoneId);
   },
 
   // ── Get active city names for this pair (non-broken zones) ──
