@@ -2,7 +2,6 @@
 
 const Comments = {
 
-  // ── Load comments into the zone's panel ──
   async loadComments(zoneId) {
     const list = document.getElementById(`comment-list-${zoneId}`);
     if (!list) return;
@@ -19,7 +18,6 @@ const Comments = {
     comments.forEach(c => list.appendChild(this.buildCommentEl(c, zoneId)));
   },
 
-  // ── Build single comment DOM element ──
   buildCommentEl(comment, zoneId) {
     const el = document.createElement('div');
     el.className = 'comment-item';
@@ -43,13 +41,9 @@ const Comments = {
       ${imgHtml}
     `;
 
-    // Lightbox on image click
     const img = el.querySelector('.comment-img');
-    if (img) {
-      img.addEventListener('click', () => this.openLightbox(comment.image_url));
-    }
+    if (img) img.addEventListener('click', () => this.openLightbox(comment.image_url));
 
-    // Delete comment
     el.querySelector('.comment-del').addEventListener('click', async () => {
       if (!confirm('Delete this comment?')) return;
       const ok = await DB.deleteComment(comment.id);
@@ -59,11 +53,9 @@ const Comments = {
     return el;
   },
 
-  // ── Open add-comment modal ──
   openModal(zoneId) {
     const modal   = document.getElementById('comment-modal');
     const overlay = document.getElementById('modal-overlay');
-    let selectedFile = null;
 
     modal.innerHTML = `
       <div class="modal-header">
@@ -76,11 +68,11 @@ const Comments = {
           <textarea class="form-textarea" id="cm-text" placeholder="Analysis, notes, observations..."></textarea>
         </div>
         <div class="form-group">
-          <label class="form-label">Screenshot (optional)</label>
-          <div class="upload-area" id="upload-area">
-            <input type="file" id="cm-file" accept="image/*" />
-            <div class="upload-label" id="upload-label">📷 Click to upload TradingView screenshot</div>
-            <img class="upload-preview" id="upload-preview" />
+          <label class="form-label">Image URL (paste TradingView link)</label>
+          <input class="form-input" id="cm-url" placeholder="https://www.tradingview.com/x/..." />
+          <div id="url-preview-wrap" style="display:none; margin-top:8px;">
+            <img id="url-preview" class="upload-preview" style="display:block; max-height:180px;" />
+            <span id="url-preview-err" style="display:none; font-size:12px; color:var(--danger);">⚠ Could not load image — check the URL</span>
           </div>
         </div>
       </div>
@@ -90,55 +82,47 @@ const Comments = {
       </div>
     `;
 
-    // Preview selected image
-    modal.querySelector('#cm-file').addEventListener('change', e => {
-      const file = e.target.files[0];
-      if (!file) return;
-      selectedFile = file;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        const preview = modal.querySelector('#upload-preview');
-        const label   = modal.querySelector('#upload-label');
-        preview.src = ev.target.result;
-        preview.style.display = 'block';
-        label.textContent = file.name;
+    // Live preview when URL is pasted
+    modal.querySelector('#cm-url').addEventListener('input', e => {
+      const url = e.target.value.trim();
+      const wrap = modal.querySelector('#url-preview-wrap');
+      const img  = modal.querySelector('#url-preview');
+      const err  = modal.querySelector('#url-preview-err');
+
+      if (!url) { wrap.style.display = 'none'; return; }
+
+      wrap.style.display = 'block';
+      img.style.display  = 'block';
+      err.style.display  = 'none';
+      img.src = url;
+      img.onerror = () => {
+        img.style.display = 'none';
+        err.style.display = 'block';
       };
-      reader.readAsDataURL(file);
+      img.onload = () => {
+        img.style.display = 'block';
+        err.style.display = 'none';
+      };
     });
 
-    const close = () => {
-      modal.classList.add('hidden');
-      overlay.classList.add('hidden');
-    };
-
+    const close = () => { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
     modal.querySelector('#cm-close').addEventListener('click', close);
     modal.querySelector('#cm-cancel').addEventListener('click', close);
     overlay.addEventListener('click', close, { once: true });
 
     modal.querySelector('#cm-save').addEventListener('click', async () => {
       const text = modal.querySelector('#cm-text').value.trim();
-      if (!text && !selectedFile) {
-        alert('Please add text or an image.');
-        return;
-      }
+      const url  = modal.querySelector('#cm-url').value.trim();
+
+      if (!text && !url) { alert('Please add text or an image URL.'); return; }
 
       const btn = modal.querySelector('#cm-save');
       btn.textContent = 'Saving...'; btn.disabled = true;
 
-      let imageUrl = null;
-      if (selectedFile) {
-        imageUrl = await DB.uploadImage(selectedFile);
-        if (!imageUrl) {
-          btn.textContent = 'Add Comment'; btn.disabled = false;
-          alert('Image upload failed. Check Supabase Storage bucket "zone-images" exists and is public.');
-          return;
-        }
-      }
-
       const comment = await DB.addComment({
-        zone_id: zoneId,
-        text: text || null,
-        image_url: imageUrl
+        zone_id:   zoneId,
+        text:      text || null,
+        image_url: url  || null
       });
 
       if (comment) {
@@ -155,7 +139,6 @@ const Comments = {
     modal.querySelector('#cm-text').focus();
   },
 
-  // ── Lightbox ──
   openLightbox(url) {
     const lb = document.createElement('div');
     lb.className = 'lightbox';
@@ -171,5 +154,4 @@ const Comments = {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
   }
-
 };
