@@ -2,7 +2,6 @@
 
 const Zones = {
 
-  // active filter per timeframe: 'all' | 'fresh' | 'tested' | 'broken'
   _filters: { weekly: 'all', daily: 'all', h4: 'all' },
 
   async renderAll(pair) {
@@ -54,7 +53,6 @@ const Zones = {
         Zones.openAddModal(pair, tf.key);
       });
 
-      // Filter buttons
       section.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -78,14 +76,13 @@ const Zones = {
 
     list.innerHTML = '<div class="loader">Loading...</div>';
     const zones = await DB.getZones(pair, timeframe);
-    // Cache on element
     list.dataset.cache = JSON.stringify(zones);
     count.textContent = `${zones.length} zone${zones.length !== 1 ? 's' : ''}`;
     this._renderZoneList(list, zones, Zones._filters[timeframe] || 'all');
   },
 
   renderFiltered(pair, timeframe) {
-    const list   = document.getElementById(`zones-${timeframe}`);
+    const list  = document.getElementById(`zones-${timeframe}`);
     if (!list) return;
     const zones  = JSON.parse(list.dataset.cache || '[]');
     const filter = Zones._filters[timeframe] || 'all';
@@ -94,7 +91,6 @@ const Zones = {
 
   _renderZoneList(list, zones, filter) {
     const filtered = filter === 'all' ? zones : zones.filter(z => z.status === filter);
-
     if (filtered.length === 0) {
       list.innerHTML = `<div class="loader" style="padding:14px 0; font-size:11px;">No ${filter === 'all' ? '' : filter + ' '}zones</div>`;
       return;
@@ -115,12 +111,17 @@ const Zones = {
       ? new Date(zone.zone_date).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' })
       : '';
 
-    // Next status for quick-update button
     const nextStatus = { fresh: 'tested', tested: 'broken', broken: 'fresh' };
     const nextLabel  = { fresh: '→ Tested', tested: '→ Broken', broken: '→ Fresh' };
 
+    // Direction badge
+    const dirHtml = zone.direction
+      ? `<span class="zone-dir ${zone.direction}">${zone.direction === 'bull' ? '▲ Bull' : '▼ Bear'}</span>`
+      : '';
+
     card.innerHTML = `
       <div class="zone-row">
+        ${dirHtml}
         <span class="zone-tag tag-${zone.status}">${zone.status}</span>
         <span class="zone-name">${zone.name}</span>
         <div class="zone-meta">
@@ -149,15 +150,13 @@ const Zones = {
       this.toggleComments(card, zone.id);
     });
 
-    // Quick status update
     card.querySelector('.btn-status-update').addEventListener('click', async (e) => {
       e.stopPropagation();
-      const btn    = e.currentTarget;
-      const next   = btn.dataset.next;
-      const pair   = btn.dataset.pair;
-      const tf     = btn.dataset.tf;
+      const btn  = e.currentTarget;
+      const next = btn.dataset.next;
+      const pair = btn.dataset.pair;
+      const tf   = btn.dataset.tf;
       btn.textContent = '...'; btn.disabled = true;
-      // If moving to tested, bump test_count
       const updates = { status: next };
       if (next === 'tested') updates.test_count = (zone.test_count || 0) + 1;
       if (next === 'fresh')  updates.test_count = 0;
@@ -188,9 +187,36 @@ const Zones = {
     if (!wasOpen) await Comments.loadComments(zoneId);
   },
 
+  // ── Get active city names for this pair (non-broken zones) ──
+  _getActiveCities(pair) {
+    const allLists = ['weekly', 'daily', 'h4'].map(tf => {
+      const el = document.getElementById(`zones-${tf}`);
+      if (!el || !el.dataset.cache) return [];
+      return JSON.parse(el.dataset.cache);
+    }).flat();
+
+    return allLists
+      .filter(z => z.pair === pair && z.status !== 'broken')
+      .map(z => z.name);
+  },
+
+  // ── Build city dropdown options ──
+  _buildCityOptions(pair, direction) {
+    const usedCities = this._getActiveCities(pair);
+    const available  = Cities.getAvailable(pair, direction, usedCities);
+
+    if (available.length === 0) {
+      return `<option value="">— No cities available —</option>`;
+    }
+    return available.map(c =>
+      `<option value="${c}">${c}</option>`
+    ).join('');
+  },
+
   openAddModal(pair, timeframe) {
     const modal   = document.getElementById('zone-modal');
     const overlay = document.getElementById('modal-overlay');
+    const hasCities = !!PAIR_CITIES[pair];
 
     modal.innerHTML = `
       <div class="modal-header">
@@ -198,10 +224,27 @@ const Zones = {
         <button class="modal-close" id="zone-modal-close">✕</button>
       </div>
       <div class="modal-body">
+        ${hasCities ? `
+        <div class="form-group">
+          <label class="form-label">Direction</label>
+          <div class="dir-toggle" id="dir-toggle">
+            <button class="dir-btn bull active" data-dir="bull">▲ Bullish</button>
+            <button class="dir-btn bear" data-dir="bear">▼ Bearish</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">City Name</label>
+          <select class="form-select" id="z-city">
+            ${this._buildCityOptions(pair, 'bull')}
+          </select>
+          <span class="form-hint" id="city-hint"></span>
+        </div>
+        ` : `
         <div class="form-group">
           <label class="form-label">Zone Name</label>
           <input class="form-input" id="z-name" placeholder="e.g. Daily Demand 1.0820–1.0850" />
         </div>
+        `}
         <div class="form-group">
           <label class="form-label">Date Created</label>
           <input class="form-input" id="z-date" type="date" value="${new Date().toISOString().slice(0,10)}" />
@@ -228,6 +271,25 @@ const Zones = {
       </div>
     `;
 
+    // Direction toggle — rebuild city list on switch
+    if (hasCities) {
+      let currentDir = 'bull';
+      modal.querySelectorAll('.dir-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentDir = btn.dataset.dir;
+          modal.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const citySelect = modal.querySelector('#z-city');
+          citySelect.innerHTML = Zones._buildCityOptions(pair, currentDir);
+          const count = Cities.getAvailable(pair, currentDir, Zones._getActiveCities(pair)).length;
+          modal.querySelector('#city-hint').textContent = `${count} cities available`;
+        });
+      });
+      // Initial hint
+      const initialCount = Cities.getAvailable(pair, 'bull', this._getActiveCities(pair)).length;
+      modal.querySelector('#city-hint').textContent = `${initialCount} cities available`;
+    }
+
     modal.querySelector('#z-status').addEventListener('change', e => {
       modal.querySelector('#tests-group').style.display = e.target.value === 'tested' ? 'flex' : 'none';
     });
@@ -238,23 +300,36 @@ const Zones = {
     overlay.addEventListener('click', close, { once: true });
 
     modal.querySelector('#zone-modal-save').addEventListener('click', async () => {
-      const name   = modal.querySelector('#z-name').value.trim();
       const status = modal.querySelector('#z-status').value;
       const date   = modal.querySelector('#z-date').value;
       const tests  = status === 'tested' ? parseInt(modal.querySelector('#z-tests').value) || 1 : 0;
-      if (!name) { alert('Please enter a zone name.'); return; }
+
+      let name, direction;
+      if (hasCities) {
+        const cityEl = modal.querySelector('#z-city');
+        name = cityEl ? cityEl.value : '';
+        direction = modal.querySelector('.dir-btn.active')?.dataset.dir || null;
+      } else {
+        name = modal.querySelector('#z-name').value.trim();
+        direction = null;
+      }
+
+      if (!name) { alert('Please select a city or enter a zone name.'); return; }
 
       const btn = modal.querySelector('#zone-modal-save');
       btn.textContent = 'Saving...'; btn.disabled = true;
 
-      const zone = await DB.addZone({ pair, timeframe, name, status, zone_date: date || null, test_count: tests });
+      const zone = await DB.addZone({
+        pair, timeframe, name, status, direction,
+        zone_date: date || null, test_count: tests
+      });
+
       if (zone) { close(); await this.loadZones(pair, timeframe); }
       else { btn.textContent = 'Add Zone'; btn.disabled = false; alert('Error saving zone.'); }
     });
 
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
-    modal.querySelector('#z-name').focus();
   },
 
   openEditModal(zone) {
