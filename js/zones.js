@@ -2,7 +2,9 @@
 
 const Zones = {
 
-  // ── Render all TF sections for a pair ──
+  // active filter per timeframe: 'all' | 'fresh' | 'tested' | 'broken'
+  _filters: { weekly: 'all', daily: 'all', h4: 'all' },
+
   async renderAll(pair) {
     const dashboard = document.getElementById('pair-dashboard');
     dashboard.innerHTML = `
@@ -27,6 +29,12 @@ const Zones = {
           <span class="tf-chevron">▼</span>
         </div>
         <div class="tf-body">
+          <div class="filter-bar" id="filter-${tf.key}">
+            <button class="filter-btn active" data-tf="${tf.key}" data-status="all">All</button>
+            <button class="filter-btn fresh"  data-tf="${tf.key}" data-status="fresh">Fresh</button>
+            <button class="filter-btn tested" data-tf="${tf.key}" data-status="tested">Tested</button>
+            <button class="filter-btn broken" data-tf="${tf.key}" data-status="broken">Broken</button>
+          </div>
           <div class="zones-list" id="zones-${tf.key}">
             <div class="loader">Loading zones...</div>
           </div>
@@ -37,23 +45,32 @@ const Zones = {
       `;
       tfSections.appendChild(section);
 
-      // Toggle expand/collapse
       section.querySelector('.tf-header').addEventListener('click', () => {
         section.classList.toggle('open');
       });
 
-      // Add zone button
       section.querySelector('.btn-add-zone').addEventListener('click', (e) => {
         e.stopPropagation();
         Zones.openAddModal(pair, tf.key);
       });
 
-      // Load zones for this TF
+      // Filter buttons
+      section.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const tfKey  = btn.dataset.tf;
+          const status = btn.dataset.status;
+          Zones._filters[tfKey] = status;
+          section.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          Zones.renderFiltered(pair, tfKey);
+        });
+      });
+
       this.loadZones(pair, tf.key);
     }
   },
 
-  // ── Load & render zones for one TF ──
   async loadZones(pair, timeframe) {
     const list  = document.getElementById(`zones-${timeframe}`);
     const count = document.getElementById(`count-${timeframe}`);
@@ -61,30 +78,46 @@ const Zones = {
 
     list.innerHTML = '<div class="loader">Loading...</div>';
     const zones = await DB.getZones(pair, timeframe);
+    // Cache on element
+    list.dataset.cache = JSON.stringify(zones);
     count.textContent = `${zones.length} zone${zones.length !== 1 ? 's' : ''}`;
-
-    if (zones.length === 0) {
-      list.innerHTML = '<div class="loader" style="padding:14px 0; font-size:11px;">No zones yet</div>';
-      return;
-    }
-
-    list.innerHTML = '';
-    zones.forEach(z => list.appendChild(this.buildZoneCard(z)));
+    this._renderZoneList(list, zones, Zones._filters[timeframe] || 'all');
   },
 
-  // ── Build a single zone card DOM element ──
+  renderFiltered(pair, timeframe) {
+    const list   = document.getElementById(`zones-${timeframe}`);
+    if (!list) return;
+    const zones  = JSON.parse(list.dataset.cache || '[]');
+    const filter = Zones._filters[timeframe] || 'all';
+    this._renderZoneList(list, zones, filter);
+  },
+
+  _renderZoneList(list, zones, filter) {
+    const filtered = filter === 'all' ? zones : zones.filter(z => z.status === filter);
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="loader" style="padding:14px 0; font-size:11px;">No ${filter === 'all' ? '' : filter + ' '}zones</div>`;
+      return;
+    }
+    list.innerHTML = '';
+    filtered.forEach(z => list.appendChild(this.buildZoneCard(z)));
+  },
+
   buildZoneCard(zone) {
     const card = document.createElement('div');
     card.className = `zone-card ${zone.status}`;
     card.dataset.id = zone.id;
 
     const testsHtml = (zone.status === 'tested' && zone.test_count > 0)
-      ? `<span class="zone-tests">×${zone.test_count}</span>`
-      : '';
+      ? `<span class="zone-tests">×${zone.test_count}</span>` : '';
 
     const date = zone.zone_date
       ? new Date(zone.zone_date).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' })
       : '';
+
+    // Next status for quick-update button
+    const nextStatus = { fresh: 'tested', tested: 'broken', broken: 'fresh' };
+    const nextLabel  = { fresh: '→ Tested', tested: '→ Broken', broken: '→ Fresh' };
 
     card.innerHTML = `
       <div class="zone-row">
@@ -95,6 +128,7 @@ const Zones = {
           <span class="zone-date">${date}</span>
         </div>
         <div class="zone-actions">
+          <button class="btn-status-update" data-id="${zone.id}" data-next="${nextStatus[zone.status]}" data-pair="${zone.pair}" data-tf="${zone.timeframe}" title="Update status">${nextLabel[zone.status]}</button>
           <button class="btn-icon edit" title="Edit">✎</button>
           <button class="btn-icon del" title="Delete">✕</button>
         </div>
@@ -110,25 +144,37 @@ const Zones = {
       </div>
     `;
 
-    // Click zone row → expand comments
     card.querySelector('.zone-row').addEventListener('click', (e) => {
       if (e.target.closest('.zone-actions')) return;
       this.toggleComments(card, zone.id);
     });
 
-    // Edit
+    // Quick status update
+    card.querySelector('.btn-status-update').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const btn    = e.currentTarget;
+      const next   = btn.dataset.next;
+      const pair   = btn.dataset.pair;
+      const tf     = btn.dataset.tf;
+      btn.textContent = '...'; btn.disabled = true;
+      // If moving to tested, bump test_count
+      const updates = { status: next };
+      if (next === 'tested') updates.test_count = (zone.test_count || 0) + 1;
+      if (next === 'fresh')  updates.test_count = 0;
+      const updated = await DB.updateZone(zone.id, updates);
+      if (updated) await Zones.loadZones(pair, tf);
+    });
+
     card.querySelector('.btn-icon.edit').addEventListener('click', (e) => {
       e.stopPropagation();
       this.openEditModal(zone);
     });
 
-    // Delete
     card.querySelector('.btn-icon.del').addEventListener('click', (e) => {
       e.stopPropagation();
       this.confirmDelete(zone);
     });
 
-    // Add comment
     card.querySelector('.btn-add-comment').addEventListener('click', () => {
       Comments.openModal(zone.id);
     });
@@ -136,18 +182,14 @@ const Zones = {
     return card;
   },
 
-  // ── Toggle comments panel ──
   async toggleComments(card, zoneId) {
     const wasOpen = card.classList.contains('expanded');
     card.classList.toggle('expanded', !wasOpen);
-    if (!wasOpen) {
-      await Comments.loadComments(zoneId);
-    }
+    if (!wasOpen) await Comments.loadComments(zoneId);
   },
 
-  // ── ADD modal ──
   openAddModal(pair, timeframe) {
-    const modal = document.getElementById('zone-modal');
+    const modal   = document.getElementById('zone-modal');
     const overlay = document.getElementById('modal-overlay');
 
     modal.innerHTML = `
@@ -186,10 +228,8 @@ const Zones = {
       </div>
     `;
 
-    // Show/hide test count
     modal.querySelector('#z-status').addEventListener('change', e => {
-      modal.querySelector('#tests-group').style.display =
-        e.target.value === 'tested' ? 'flex' : 'none';
+      modal.querySelector('#tests-group').style.display = e.target.value === 'tested' ? 'flex' : 'none';
     });
 
     const close = () => { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
@@ -202,20 +242,14 @@ const Zones = {
       const status = modal.querySelector('#z-status').value;
       const date   = modal.querySelector('#z-date').value;
       const tests  = status === 'tested' ? parseInt(modal.querySelector('#z-tests').value) || 1 : 0;
-
       if (!name) { alert('Please enter a zone name.'); return; }
 
       const btn = modal.querySelector('#zone-modal-save');
       btn.textContent = 'Saving...'; btn.disabled = true;
 
       const zone = await DB.addZone({ pair, timeframe, name, status, zone_date: date || null, test_count: tests });
-      if (zone) {
-        close();
-        await this.loadZones(pair, timeframe);
-      } else {
-        btn.textContent = 'Add Zone'; btn.disabled = false;
-        alert('Error saving zone. Check console.');
-      }
+      if (zone) { close(); await this.loadZones(pair, timeframe); }
+      else { btn.textContent = 'Add Zone'; btn.disabled = false; alert('Error saving zone.'); }
     });
 
     overlay.classList.remove('hidden');
@@ -223,9 +257,8 @@ const Zones = {
     modal.querySelector('#z-name').focus();
   },
 
-  // ── EDIT modal ──
   openEditModal(zone) {
-    const modal = document.getElementById('zone-modal');
+    const modal   = document.getElementById('zone-modal');
     const overlay = document.getElementById('modal-overlay');
 
     modal.innerHTML = `
@@ -265,8 +298,7 @@ const Zones = {
     `;
 
     modal.querySelector('#z-status').addEventListener('change', e => {
-      modal.querySelector('#tests-group').style.display =
-        e.target.value === 'tested' ? 'flex' : 'none';
+      modal.querySelector('#tests-group').style.display = e.target.value === 'tested' ? 'flex' : 'none';
     });
 
     const close = () => { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
@@ -279,30 +311,23 @@ const Zones = {
       const status = modal.querySelector('#z-status').value;
       const date   = modal.querySelector('#z-date').value;
       const tests  = status === 'tested' ? parseInt(modal.querySelector('#z-tests').value) || 1 : 0;
-
       if (!name) { alert('Please enter a zone name.'); return; }
 
       const btn = modal.querySelector('#zone-modal-save');
       btn.textContent = 'Saving...'; btn.disabled = true;
 
       const updated = await DB.updateZone(zone.id, { name, status, zone_date: date || null, test_count: tests });
-      if (updated) {
-        close();
-        await this.loadZones(zone.pair, zone.timeframe);
-      } else {
-        btn.textContent = 'Save Changes'; btn.disabled = false;
-      }
+      if (updated) { close(); await this.loadZones(zone.pair, zone.timeframe); }
+      else { btn.textContent = 'Save Changes'; btn.disabled = false; }
     });
 
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
   },
 
-  // ── Delete confirm ──
   async confirmDelete(zone) {
     if (!confirm(`Delete zone "${zone.name}"? This will also remove all comments.`)) return;
     const ok = await DB.deleteZone(zone.id);
     if (ok) await this.loadZones(zone.pair, zone.timeframe);
   }
-
 };
