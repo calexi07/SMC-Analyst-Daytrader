@@ -1307,3 +1307,236 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
   margin-top: 6px;
   letter-spacing: 0.08em;
 }
+
+/* ══════════════════════════════════
+   LIVE PRICE BADGES
+══════════════════════════════════ */
+.price-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 6px;
+}
+.price-val {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 4px;
+}
+.price-val.fresh { background: #ecfdf5; color: var(--fresh); border: 1px solid var(--fresh-border); }
+.price-val.stale { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.price-age {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted2);
+  letter-spacing: 0.05em;
+}
+
+/* ══════════════════════════════════
+   PENDING ZONES
+══════════════════════════════════ */
+.pending-zones {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.pending-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--warn);
+  margin-bottom: 10px;
+}
+.pending-icon { font-size: 16px; }
+.pending-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--tested-border);
+  border-radius: 5px;
+  margin-bottom: 6px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pending-row-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pending-tf {
+  font-family: var(--mono);
+  font-size: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--muted);
+}
+.pending-prices {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+}
+.pending-row-actions { display: flex; gap: 6px; }
+.btn-validate {
+  padding: 4px 12px;
+  background: var(--fresh-bg);
+  border: 1px solid var(--fresh-border);
+  color: var(--fresh);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-validate:hover { background: var(--fresh); color: #fff; }
+.btn-dismiss {
+  padding: 4px 8px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-dismiss:hover { color: var(--danger); border-color: var(--danger); }
+
+/* ══════════════════════════════════
+   ZONE MAP
+══════════════════════════════════ */
+.zone-map-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 16px 0;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.zone-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.zone-map-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+.zone-map-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.zone-map { padding: 14px 20px; }
+.map-no-price {
+  text-align: center;
+  padding: 20px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted2);
+}
+.map-current-price {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text2);
+  padding: 6px 10px;
+  background: var(--surface2);
+  border-radius: 5px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.map-price-tf {
+  font-size: 10px;
+  color: var(--muted);
+  margin-left: 4px;
+}
+.map-list { display: flex; flex-direction: column; gap: 6px; }
+.map-row {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 4px;
+  transition: border-color 0.2s;
+}
+.map-row:hover { border-color: var(--border2); }
+.map-row-inside {
+  border-color: var(--warn) !important;
+  background: #fffbeb;
+}
+.map-row-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.map-row-right { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.map-prices {
+  grid-column: 1 / -1;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+.map-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.map-tf {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.map-dir { font-size: 12px; font-weight: 700; }
+.map-bull { color: var(--fresh); }
+.map-bear { color: var(--danger); }
+.map-bar-wrap {
+  width: 60px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.map-bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s;
+}
+.map-bar.map-bull { background: var(--fresh); }
+.map-bar.map-bear { background: var(--danger); }
+.map-dist {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  min-width: 70px;
+  text-align: right;
+}
+.map-inside { color: var(--warn); font-weight: 700; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* Validate modal */
+.validate-summary {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vs-row { display: flex; justify-content: space-between; align-items: center; }
+.vs-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+.vs-val { font-size: 13px; font-weight: 500; color: var(--text); }
+.vs-val.mono { font-family: var(--mono); font-size: 12px; }
+.text-bull { color: var(--fresh); font-weight: 700; }
+.text-bear { color: var(--danger); font-weight: 700; }
