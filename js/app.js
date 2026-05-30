@@ -9,6 +9,15 @@ const App = {
     document.getElementById('nav-dashboard').addEventListener('click', () => this.showDashboard());
     document.getElementById('nav-pairs').addEventListener('click', () => this.showPairsView());
 
+    // Bell
+    document.getElementById('notif-bell').addEventListener('click', function(e) {
+      e.stopPropagation();
+      Notifications.togglePanel();
+    });
+
+    // Init notifications
+    Notifications.init();
+
     Pairs.init();
 
     // Restore last view
