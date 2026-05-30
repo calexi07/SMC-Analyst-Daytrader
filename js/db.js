@@ -101,3 +101,59 @@ const DB = {
   },
 
 };
+
+  // ── PAIR ANALYSIS ──
+
+  async getAnalysis(pair, date) {
+    const { data, error } = await db
+      .from('pair_analysis')
+      .select('*')
+      .eq('pair', pair)
+      .eq('analysis_date', date)
+      .maybeSingle();
+    if (error) { console.error('getAnalysis:', error); return null; }
+    return data;
+  },
+
+  async getAnalysisDates(pair) {
+    const { data, error } = await db
+      .from('pair_analysis')
+      .select('analysis_date')
+      .eq('pair', pair)
+      .order('analysis_date', { ascending: false });
+    if (error) { console.error('getAnalysisDates:', error); return []; }
+    return data.map(r => r.analysis_date);
+  },
+
+  async saveAnalysis(pair, date, fields) {
+    // Upsert by pair + date
+    const { data: existing } = await db
+      .from('pair_analysis')
+      .select('id')
+      .eq('pair', pair)
+      .eq('analysis_date', date)
+      .maybeSingle();
+
+    if (existing) {
+      const { data, error } = await db
+        .from('pair_analysis')
+        .update({ ...fields, updated_at: new Date().toISOString() })
+        .eq('id', existing.id)
+        .select().single();
+      if (error) { console.error('saveAnalysis update:', error); return null; }
+      return data;
+    } else {
+      const { data, error } = await db
+        .from('pair_analysis')
+        .insert([{ pair, analysis_date: date, ...fields }])
+        .select().single();
+      if (error) { console.error('saveAnalysis insert:', error); return null; }
+      return data;
+    }
+  },
+
+  async deleteAnalysis(id) {
+    const { error } = await db.from('pair_analysis').delete().eq('id', id);
+    if (error) { console.error('deleteAnalysis:', error); return false; }
+    return true;
+  },
