@@ -153,3 +153,59 @@ const DB = {
   },
 
 };
+
+  // ── LIVE PRICES ──
+
+  async getLivePrice(pair, tf) {
+    var { data, error } = await db
+      .from('live_prices')
+      .select('*')
+      .eq('pair', pair)
+      .eq('tf', tf)
+      .maybeSingle();
+    if (error) { console.error('getLivePrice:', error); return null; }
+    return data;
+  },
+
+  async getAllLivePrices(pair) {
+    var { data, error } = await db
+      .from('live_prices')
+      .select('*')
+      .eq('pair', pair);
+    if (error) { console.error('getAllLivePrices:', error); return []; }
+    return data || [];
+  },
+
+  // ── PENDING ZONES ──
+
+  async getPendingZones(pair) {
+    var { data, error } = await db
+      .from('pending_zones')
+      .select('*')
+      .eq('pair', pair)
+      .eq('validated', false)
+      .order('created_at', { ascending: false });
+    if (error) { console.error('getPendingZones:', error); return []; }
+    return data || [];
+  },
+
+  async validatePendingZone(pendingId, zoneName, pair, timeframe, direction, top, btm) {
+    // Create real zone
+    var zone = await this.addZone({
+      pair, timeframe, direction,
+      name:       zoneName,
+      status:     'fresh',
+      zone_date:  new Date().toISOString().slice(0, 10),
+      test_count: 0,
+      price_top:  top,
+      price_btm:  btm,
+    });
+    if (!zone) return null;
+    // Mark pending as validated
+    await db.from('pending_zones').update({ validated: true }).eq('id', pendingId);
+    return zone;
+  },
+
+  async dismissPendingZone(id) {
+    await db.from('pending_zones').update({ validated: true }).eq('id', id);
+  },
