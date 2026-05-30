@@ -8,14 +8,12 @@ const Dashboard = {
     if (!el) return;
 
     // Load all setups from DB
-    const { data: allComments } = await db
-      .from('zone_comments')
-      .select('text, created_at');
+    const allComments = await DB.getAllSetups();
 
     let wins = 0, losses = 0, be = 0, pending = 0;
     let totalProfit = 0, totalLoss = 0;
 
-    (allComments || []).forEach(c => {
+    allComments.forEach(c => {
       let data = {};
       try { data = JSON.parse(c.text || '{}'); } catch(e) {}
       if (!data.outcome) return;
