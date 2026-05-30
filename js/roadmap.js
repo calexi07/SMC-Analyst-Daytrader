@@ -69,7 +69,18 @@ const RoadMap = {
           '<span class="road-price-live">LIVE</span>' +
           '<span class="road-price-val" id="road-price-val">' + currentPrice.toFixed(decimals) + '</span>' +
         '</div>' +
+        '<button class="road-screenshot-btn" id="road-screenshot-btn" title="Copy screenshot to clipboard">📸</button>' +
       '</div>';
+
+    // Screenshot button
+    setTimeout(function() {
+      var screenshotBtn = document.getElementById('road-screenshot-btn');
+      if (screenshotBtn) {
+        screenshotBtn.addEventListener('click', function() {
+          RoadMap._screenshot();
+        });
+      }
+    }, 100);
 
     // Store zone data for canvas draw
     RoadMap._zones   = zones;
@@ -333,6 +344,48 @@ const RoadMap = {
   updatePrice(price) {
     RoadMap._price   = price;
     RoadMap._targetX = ((price - RoadMap._minP) / RoadMap._range) * (RoadMap._W - 80) + 40;
+  },
+
+  async _screenshot() {
+    var canvas = document.getElementById('road-canvas');
+    if (!canvas) return;
+
+    var btn = document.getElementById('road-screenshot-btn');
+
+    try {
+      // Convert canvas to blob
+      canvas.toBlob(async function(blob) {
+        try {
+          // Copy to clipboard as image
+          var item = new ClipboardItem({ 'image/png': blob });
+          await navigator.clipboard.write([item]);
+
+          // Visual feedback
+          if (btn) {
+            btn.textContent = '✅';
+            btn.style.background = '#059669';
+            setTimeout(function() {
+              btn.textContent = '📸';
+              btn.style.background = '';
+            }, 2000);
+          }
+        } catch(e) {
+          // Fallback — download as file
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = 'zone-map-' + Date.now() + '.png';
+          a.click();
+          URL.revokeObjectURL(url);
+          if (btn) {
+            btn.textContent = '💾 Saved';
+            setTimeout(function() { btn.textContent = '📸'; }, 2000);
+          }
+        }
+      }, 'image/png');
+    } catch(e) {
+      console.error('Screenshot error:', e);
+    }
   },
 
   stop() {
