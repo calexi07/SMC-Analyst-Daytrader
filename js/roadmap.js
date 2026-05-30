@@ -2,6 +2,10 @@
 
 const RoadMap = {
 
+  _priceHistory: [],   // {price, ts} last 15min
+  _direction: 1,       // 1 = right (bullish), -1 = left (bearish)
+  _dashOffset: 0,      // animated dash position
+
   _animFrame: null,
   _truckX: 0,
   _targetX: 0,
@@ -11,6 +15,19 @@ const RoadMap = {
 
   render(mapEl, zones, currentPrice, pObj, pipSize) {
     var decimals = currentPrice > 100 ? 2 : 5;
+
+    // Track price history for direction
+    var now = Date.now();
+    RoadMap._priceHistory.push({ price: currentPrice, ts: now });
+    // Keep only last 15 minutes
+    RoadMap._priceHistory = RoadMap._priceHistory.filter(function(p) {
+      return now - p.ts < 15 * 60 * 1000;
+    });
+    // Determine direction
+    if (RoadMap._priceHistory.length >= 2) {
+      var oldest = RoadMap._priceHistory[0].price;
+      RoadMap._direction = currentPrice >= oldest ? 1 : -1;
+    }
     var W = mapEl.offsetWidth || 700;
     var H = 320;
 
@@ -128,12 +145,12 @@ const RoadMap = {
     ctx.beginPath(); ctx.moveTo(0, roadTop + 3); ctx.lineTo(W, roadTop + 3); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, roadTop + roadH - 3); ctx.lineTo(W, roadTop + roadH - 3); ctx.stroke();
 
-    // Center dashes (animated)
-    var dashOffset = (Date.now() / 20) % 40;
+    // Center dashes (animated — direction based on price momentum)
+    RoadMap._dashOffset += RoadMap._direction * 1.2;
     ctx.strokeStyle = 'rgba(255,255,255,0.6)';
     ctx.lineWidth = 2;
     ctx.setLineDash([20, 20]);
-    ctx.lineDashOffset = dashOffset;
+    ctx.lineDashOffset = RoadMap._dashOffset;
     ctx.beginPath(); ctx.moveTo(0, roadY); ctx.lineTo(W, roadY); ctx.stroke();
     ctx.setLineDash([]);
 
@@ -211,17 +228,25 @@ const RoadMap = {
     // TRUCK
     var tx = RoadMap._truckX;
     var ty = roadY - 10;
+    var dir = RoadMap._direction;
 
-    // Truck shadow
+    // Draw truck flipped based on direction
+    ctx.save();
+    ctx.translate(tx, 0);
+    ctx.scale(dir, 1);  // flip horizontally when going left
+
+    var lx = 0; // local x (truck centered at 0)
+
+    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
     ctx.beginPath();
-    ctx.ellipse(tx, ty + 18, 28, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(lx, ty + 18, 28, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Truck body (cargo)
+    // Body (cargo)
     ctx.fillStyle = '#1d4ed8';
     ctx.beginPath();
-    ctx.roundRect(tx - 26, ty - 10, 36, 20, 3);
+    ctx.roundRect(lx - 26, ty - 10, 36, 20, 3);
     ctx.fill();
     ctx.strokeStyle = '#1e40af';
     ctx.lineWidth = 1;
@@ -230,32 +255,32 @@ const RoadMap = {
     // Cargo stripes
     ctx.fillStyle = 'rgba(255,255,255,0.1)';
     for (var s = 0; s < 3; s++) {
-      ctx.fillRect(tx - 22 + s * 10, ty - 8, 2, 16);
+      ctx.fillRect(lx - 22 + s * 10, ty - 8, 2, 16);
     }
 
-    // Cab
+    // Cab (front = right side in local coords)
     ctx.fillStyle = '#2563eb';
     ctx.beginPath();
-    ctx.roundRect(tx + 10, ty - 14, 18, 22, 4);
+    ctx.roundRect(lx + 10, ty - 14, 18, 22, 4);
     ctx.fill();
 
     // Windshield
     ctx.fillStyle = '#93c5fd';
     ctx.globalAlpha = 0.9;
     ctx.beginPath();
-    ctx.roundRect(tx + 12, ty - 12, 14, 10, 2);
+    ctx.roundRect(lx + 12, ty - 12, 14, 10, 2);
     ctx.fill();
     ctx.globalAlpha = 1;
 
     // Headlight
     ctx.fillStyle = '#fef08a';
     ctx.beginPath();
-    ctx.ellipse(tx + 27, ty + 3, 3, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(lx + 27, ty + 3, 3, 4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Wheels (with rotation animation)
-    var wheelRot = Date.now() / 80;
-    [[tx - 16, ty + 12], [tx + 16, ty + 12]].forEach(function(w) {
+    // Wheels
+    var wheelRot = (Date.now() / 80) * dir;
+    [[lx - 16, ty + 12], [lx + 16, ty + 12]].forEach(function(w) {
       ctx.fillStyle = '#111827';
       ctx.beginPath();
       ctx.arc(w[0], w[1], 7, 0, Math.PI * 2);
@@ -264,7 +289,6 @@ const RoadMap = {
       ctx.beginPath();
       ctx.arc(w[0], w[1], 4, 0, Math.PI * 2);
       ctx.fill();
-      // Spoke
       ctx.strokeStyle = '#9ca3af';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -273,15 +297,23 @@ const RoadMap = {
       ctx.stroke();
     });
 
-    // Exhaust puff
+    // Exhaust (always behind = left side in local, appears on right when flipped)
     var puffAlpha = 0.3 + 0.2 * Math.sin(Date.now() / 200);
     ctx.fillStyle = 'rgba(156,163,175,' + puffAlpha + ')';
     ctx.beginPath();
-    ctx.arc(tx - 30, ty - 6, 4, 0, Math.PI * 2);
+    ctx.arc(lx - 30, ty - 6, 5, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(tx - 36, ty - 10, 3, 0, Math.PI * 2);
+    ctx.arc(lx - 38, ty - 10, 3.5, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.restore();
+
+    // Direction indicator arrow above truck
+    ctx.fillStyle = dir === 1 ? '#10b981' : '#ef4444';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(dir === 1 ? '▶' : '◀', tx, ty - 28);
 
     // Update price pill position
     var pill = document.getElementById('road-price-pill');
@@ -310,6 +342,7 @@ const RoadMap = {
     }
     RoadMap._initialized = false;
     RoadMap._clouds = [];
-    RoadMap._trees  = [];
+    RoadMap._priceHistory = [];
+    RoadMap._dashOffset = 0;
   }
 };
