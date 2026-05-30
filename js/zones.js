@@ -11,6 +11,7 @@ const Zones = {
         <div class="pair-name">${pair}</div>
       </div>
       <div class="tf-sections" id="tf-sections"></div>
+      <div class="analysis-section" id="analysis-section-${pair}"></div>
     `;
 
     const tfSections = document.getElementById('tf-sections');
@@ -67,6 +68,10 @@ const Zones = {
 
       this.loadZones(pair, tf.key);
     }
+
+    // Render analysis section below zones
+    const analysisContainer = document.getElementById(`analysis-section-${pair}`);
+    if (analysisContainer) await Analysis.render(pair, analysisContainer);
   },
 
   async loadZones(pair, timeframe) {
