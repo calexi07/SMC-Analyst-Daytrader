@@ -27,6 +27,8 @@ const TRADING_PAIRS = [
   { value: 'XAUUSD',  label: 'XAU/USD (Gold)',  group: 'Metals & Indices' },
   { value: 'GER40',   label: 'GER40 (DAX)',      group: 'Metals & Indices' },
   { value: 'NAS100',  label: 'NAS100 (Nasdaq)',   group: 'Metals & Indices' },
+  // Crypto
+  { value: 'BTCUSD',  label: 'BTC/USD (Bitcoin)', group: 'Crypto' },
 ];
 
 // ── Timeframes ──
