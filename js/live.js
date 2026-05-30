@@ -89,37 +89,37 @@ const Live = {
     var mapEl = document.getElementById('zone-map-' + pair);
     if (!mapEl) return;
 
-    // Get current price — prefer 4h
+    // Get current price — prefer 1m then others
     var pObj = Live.getPrice(pair, '1m') || Live.getPrice(pair, '4h') || Live.getPrice(pair, 'daily') || Live.getPrice(pair, '1h');
     if (!pObj || !pObj.price) {
       mapEl.innerHTML = '<div class="map-no-price">⏳ Waiting for live price...</div>';
       return;
     }
 
-    var currentPrice = parseFloat(pObj.price);
+    var currentPrice = safeFloat(pObj.price);
     var isJPY = pair.includes('JPY');
-    var pipSize = isJPY ? 0.01 : 0.0001;
+    var isCrypto = currentPrice > 1000;
+    var pipSize = isJPY ? 0.01 : isCrypto ? 1 : 0.0001;
 
-    // Gather all zones from cache
+    // Fetch zones directly from DB (don't rely on cache)
     var allZones = [];
-    ['weekly', 'daily', '4h'].forEach(function(tf) {
-      var el = document.getElementById('zones-' + tf);
-      if (!el || !el.dataset.cache) return;
-      var zones = JSON.parse(el.dataset.cache);
+    var tfs = ['weekly', 'daily', '4h'];
+    for (var i = 0; i < tfs.length; i++) {
+      var tf = tfs[i];
+      var zones = await DB.getZones(pair, tf);
       zones.forEach(function(z) {
         if (z.status === 'broken') return;
-        if (!safeFloat(z.price_top) && !safeFloat(z.price_btm)) return;
-        var top = safeFloat(z.price_top) || 0;
-        var btm = safeFloat(z.price_btm) || 0;
-        var mid = (top + btm) / 2 || top || btm;
+        var top = safeFloat(z.price_top);
+        var btm = safeFloat(z.price_btm);
+        if (!top && !btm) return;
+        // Auto-correct if top/btm are swapped
+        if (top && btm && top < btm) { var tmp = top; top = btm; btm = tmp; }
+        var mid = (top && btm) ? (top + btm) / 2 : (top || btm);
         var distPips = Math.abs(currentPrice - mid) / pipSize;
-        var inside = currentPrice >= btm && currentPrice <= top;
-        allZones.push({
-          zone: z, tf: z.timeframe,
-          top, btm, mid, distPips, inside,
-        });
+        var inside = btm && top ? (currentPrice >= btm && currentPrice <= top) : false;
+        allZones.push({ zone: z, tf: tf, top: top, btm: btm, mid: mid, distPips: distPips, inside: inside });
       });
-    });
+    }
 
     if (allZones.length === 0) {
       mapEl.innerHTML = '<div class="map-no-price" style="font-size:12px;">Add price levels to zones to see the map</div>';
