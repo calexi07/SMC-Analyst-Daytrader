@@ -1773,3 +1773,15 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
 @media (max-width: 500px) {
   .notif-panel { width: 95vw; right: -10px; }
 }
+
+/* ── ROAD MAP SVG ── */
+.zone-map {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: #f1f5f9;
+  min-height: 200px;
+}
+.zone-map svg { display: block; }
+.zone-sign { transition: opacity 0.2s; }
+.zone-sign:hover { opacity: 0.85; }
