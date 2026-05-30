@@ -32,8 +32,17 @@ const Dashboard = {
 
     el.innerHTML = `
       <div class="dash-hero">
+        <div class="dash-hero-eyebrow">🚗 The5%ers · SMC Analyst</div>
         <div class="dash-hero-title">The Delivery Man</div>
         <div class="dash-hero-sub">Cristian</div>
+        <div class="dash-hero-tagline">Every zone is a city. Every trade is a delivery.</div>
+        <div class="dash-hero-stats-bar">
+          <div class="hero-stat"><span class="hero-stat-val" id="hs-trades">${totalTrades}</span><span class="hero-stat-lbl">Deliveries</span></div>
+          <div class="hero-stat-div">·</div>
+          <div class="hero-stat"><span class="hero-stat-val" id="hs-wr">${winRate}${winRate !== '—' ? '%' : ''}</span><span class="hero-stat-lbl">Win Rate</span></div>
+          <div class="hero-stat-div">·</div>
+          <div class="hero-stat"><span class="hero-stat-val ${netPnl >= 0 ? 'pos' : 'neg'}">${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)}</span><span class="hero-stat-lbl">Net P&L</span></div>
+        </div>
       </div>
 
       <div class="dash-grid">
