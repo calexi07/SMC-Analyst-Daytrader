@@ -10,7 +10,15 @@ const Zones = {
       <div class="pair-header">
         <div class="pair-name">${pair}</div>
       </div>
+      <div class="pending-zones" id="pending-zones-${pair}" style="display:none;"></div>
       <div class="tf-sections" id="tf-sections"></div>
+      <div class="zone-map-section">
+        <div class="zone-map-header">
+          <span class="zone-map-title">🗺 Zone Map</span>
+          <span class="zone-map-sub">Distance from current price</span>
+        </div>
+        <div id="zone-map-${pair}" class="zone-map"><div class="loader">Waiting for price data...</div></div>
+      </div>
       <div class="analysis-section" id="analysis-section-${pair}"></div>
     `;
 
@@ -72,6 +80,9 @@ const Zones = {
     // Render analysis section below zones
     const analysisContainer = document.getElementById(`analysis-section-${pair}`);
     if (analysisContainer) await Analysis.render(pair, analysisContainer);
+
+    // Start live price polling
+    Live.startPolling(pair);
   },
 
   async loadZones(pair, timeframe) {
@@ -267,6 +278,16 @@ const Zones = {
           <div class="tests-group">
             <input class="form-input" id="z-tests" type="number" min="1" value="1" />
             <span class="tests-label">times</span>
+          </div>
+        </div>
+        <div class="setup-row-2" style="grid-template-columns:1fr 1fr;">
+          <div class="form-group">
+            <label class="form-label">Price Top</label>
+            <input class="form-input" id="z-top" type="number" step="0.00001" placeholder="1.08500" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Price Bottom</label>
+            <input class="form-input" id="z-btm" type="number" step="0.00001" placeholder="1.08200" />
           </div>
         </div>
       </div>
