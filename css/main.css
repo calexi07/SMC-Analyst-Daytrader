@@ -1774,14 +1774,45 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
   .notif-panel { width: 95vw; right: -10px; }
 }
 
-/* ── ROAD MAP SVG ── */
+/* ── ROAD MAP ── */
 .zone-map {
   padding: 0;
   overflow: hidden;
   border-radius: 0 0 var(--radius) var(--radius);
-  background: #f1f5f9;
-  min-height: 200px;
+  background: #bfdbfe;
+  min-height: 220px;
+  position: relative;
 }
-.zone-map svg { display: block; }
-.zone-sign { transition: opacity 0.2s; }
-.zone-sign:hover { opacity: 0.85; }
+.road-wrap {
+  position: relative;
+  width: 100%;
+}
+.road-wrap canvas { display: block; width: 100%; }
+
+.road-price-pill {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #1d4ed8;
+  border-radius: 20px;
+  padding: 3px 10px;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(29,78,216,0.4);
+  transition: left 0.3s ease;
+}
+.road-price-live {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.15em;
+  color: #93c5fd;
+  text-transform: uppercase;
+}
+.road-price-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  color: #fff;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
