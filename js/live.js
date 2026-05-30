@@ -107,10 +107,12 @@ const Live = {
     for (var i = 0; i < tfs.length; i++) {
       var tf = tfs[i];
       var zones = await DB.getZones(pair, tf);
+      console.log('Zone map fetch', tf, zones.length, 'zones');
       zones.forEach(function(z) {
         if (z.status === 'broken') return;
         var top = safeFloat(z.price_top);
         var btm = safeFloat(z.price_btm);
+        console.log('Zone:', z.name, 'top:', top, 'btm:', btm);
         if (!top && !btm) return;
         // Auto-correct if top/btm are swapped
         if (top && btm && top < btm) { var tmp = top; top = btm; btm = tmp; }
@@ -120,6 +122,7 @@ const Live = {
         allZones.push({ zone: z, tf: tf, top: top, btm: btm, mid: mid, distPips: distPips, inside: inside });
       });
     }
+    console.log('Total zones with prices:', allZones.length);
 
     if (allZones.length === 0) {
       mapEl.innerHTML = '<div class="map-no-price" style="font-size:12px;">Add price levels to zones to see the map</div>';
