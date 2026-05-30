@@ -5,6 +5,10 @@ const RoadMap = {
   _priceHistory: [],   // {price, ts} last 15min
   _direction: 1,       // 1 = right (bullish), -1 = left (bearish)
   _dashOffset: 0,      // animated dash position
+  _panOffset: 0,       // horizontal pan offset from drag
+  _isDragging: false,
+  _dragStartX: 0,
+  _dragStartPan: 0,
 
   _animFrame: null,
   _truckX: 0,
@@ -46,6 +50,10 @@ const RoadMap = {
     function priceToX(p) {
       return ((p - minP) / range) * (W - 80) + 40;
     }
+    // Pan-adjusted version for zones
+    function priceToXPanned(p) {
+      return priceToX(p); // zones are drawn inside save/translate(pan), so no need to add pan
+    }
 
     var truckTargetX = priceToX(currentPrice);
 
@@ -70,14 +78,23 @@ const RoadMap = {
           '<span class="road-price-val" id="road-price-val">' + currentPrice.toFixed(decimals) + '</span>' +
         '</div>' +
         '<button class="road-screenshot-btn" id="road-screenshot-btn" title="Copy screenshot to clipboard">📸</button>' +
+        '<button class="road-reset-btn" id="road-reset-btn" title="Reset view">⌖</button>' +
+        '<div class="road-drag-hint" id="road-drag-hint">← drag to pan →</div>' +
       '</div>';
 
-    // Screenshot button
+    // Screenshot button + drag
     setTimeout(function() {
       var screenshotBtn = document.getElementById('road-screenshot-btn');
       if (screenshotBtn) {
         screenshotBtn.addEventListener('click', function() {
           RoadMap._screenshot();
+        });
+      }
+      RoadMap._initDrag();
+      var resetBtn = document.getElementById('road-reset-btn');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+          RoadMap._panOffset = 0;
         });
       }
     }, 100);
@@ -116,6 +133,13 @@ const RoadMap = {
 
     // Clear
     ctx.clearRect(0, 0, W, H);
+
+    // Apply pan offset to scene (not truck — truck stays centered on price)
+    var pan = RoadMap._panOffset;
+
+    // Apply pan to world (road + zones)
+    ctx.save();
+    ctx.translate(pan, 0);
 
     // Sky gradient
     var sky = ctx.createLinearGradient(0, 0, 0, roadTop);
@@ -236,7 +260,9 @@ const RoadMap = {
       }
     });
 
-    // TRUCK
+    ctx.restore(); // end pan
+
+    // TRUCK (not panned — stays at price position)
     var tx = RoadMap._truckX;
     var ty = roadY - 10;
     var dir = RoadMap._direction;
@@ -346,6 +372,47 @@ const RoadMap = {
     RoadMap._targetX = ((price - RoadMap._minP) / RoadMap._range) * (RoadMap._W - 80) + 40;
   },
 
+  _initDrag() {
+    var canvas = document.getElementById('road-canvas');
+    if (!canvas) return;
+
+    // Mouse
+    canvas.addEventListener('mousedown', function(e) {
+      RoadMap._isDragging = true;
+      RoadMap._dragStartX = e.clientX;
+      RoadMap._dragStartPan = RoadMap._panOffset;
+      canvas.style.cursor = 'grabbing';
+      var hint = document.getElementById('road-drag-hint');
+      if (hint) hint.style.display = 'none';
+    });
+    window.addEventListener('mousemove', function(e) {
+      if (!RoadMap._isDragging) return;
+      var dx = e.clientX - RoadMap._dragStartX;
+      RoadMap._panOffset = RoadMap._dragStartPan + dx;
+    });
+    window.addEventListener('mouseup', function() {
+      RoadMap._isDragging = false;
+      if (canvas) canvas.style.cursor = 'grab';
+    });
+
+    // Touch
+    canvas.addEventListener('touchstart', function(e) {
+      RoadMap._isDragging = true;
+      RoadMap._dragStartX = e.touches[0].clientX;
+      RoadMap._dragStartPan = RoadMap._panOffset;
+    }, { passive: true });
+    canvas.addEventListener('touchmove', function(e) {
+      if (!RoadMap._isDragging) return;
+      var dx = e.touches[0].clientX - RoadMap._dragStartX;
+      RoadMap._panOffset = RoadMap._dragStartPan + dx;
+    }, { passive: true });
+    canvas.addEventListener('touchend', function() {
+      RoadMap._isDragging = false;
+    });
+
+    canvas.style.cursor = 'grab';
+  },
+
   async _screenshot() {
     var canvas = document.getElementById('road-canvas');
     if (!canvas) return;
@@ -397,5 +464,7 @@ const RoadMap = {
     RoadMap._clouds = [];
     RoadMap._priceHistory = [];
     RoadMap._dashOffset = 0;
+    RoadMap._panOffset = 0;
+    RoadMap._isDragging = false;
   }
 };
