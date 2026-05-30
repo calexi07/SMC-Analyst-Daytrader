@@ -1,5 +1,11 @@
 // ── Zones Module ──
 
+function zSafeFloat(val) {
+  if (!val && val !== 0) return null;
+  var n = parseFloat(String(val).replace(',', '.'));
+  return isNaN(n) ? null : n;
+}
+
 const Zones = {
 
   _filters: { weekly: 'all', daily: 'all', h4: 'all' },
@@ -349,8 +355,8 @@ const Zones = {
       const btn = modal.querySelector('#zone-modal-save');
       btn.textContent = 'Saving...'; btn.disabled = true;
 
-      const top = parseFloat(modal.querySelector('#z-top')?.value) || null;
-      const btm = parseFloat(modal.querySelector('#z-btm')?.value) || null;
+      const top = zSafeFloat(modal.querySelector('#z-top')?.value);
+      const btm = zSafeFloat(modal.querySelector('#z-btm')?.value);
       const zone = await DB.addZone({
         pair, timeframe, name, status, direction,
         zone_date: date || null, test_count: tests,
@@ -453,8 +459,8 @@ const Zones = {
       const status = modal.querySelector('#z-status').value;
       const date   = modal.querySelector('#z-date').value;
       const tests  = status === 'tested' ? parseInt(modal.querySelector('#z-tests').value) || 1 : 0;
-      const top    = parseFloat(modal.querySelector('#z-top').value) || null;
-      const btm    = parseFloat(modal.querySelector('#z-btm').value) || null;
+      const top    = zSafeFloat(modal.querySelector('#z-top').value);
+      const btm    = zSafeFloat(modal.querySelector('#z-btm').value);
 
       let name;
       if (hasCities) {
