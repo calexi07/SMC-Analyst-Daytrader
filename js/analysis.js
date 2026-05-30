@@ -131,6 +131,7 @@ const Analysis = {
       <div class="an-view-header">
         <span class="an-date-label">📅 ${dateLabel}</span>
         <div class="an-view-actions">
+          <button class="btn btn-discord btn-sm"   id="an-discord-${pair}">🔗 Share to Discord</button>
           <button class="btn btn-secondary btn-sm" id="an-edit-${pair}">✎ Edit</button>
           <button class="btn btn-danger btn-sm"    id="an-del-${pair}">✕ Delete</button>
         </div>
@@ -153,6 +154,10 @@ const Analysis = {
         }).join('')}
       </div>
     `;
+
+    document.getElementById(`an-discord-${pair}`).addEventListener('click', () => {
+      this.openDiscordModal(pair, date, analysis);
+    });
 
     document.getElementById(`an-edit-${pair}`).addEventListener('click', () => {
       this.renderForm(pair, date, analysis, body);
@@ -197,7 +202,120 @@ const Analysis = {
     });
   },
 
-  // ── Render edit/create form ──
+  // ── Discord share modal ──
+  openDiscordModal(pair, date, analysis) {
+    const modal   = document.getElementById('comment-modal');
+    const overlay = document.getElementById('modal-overlay');
+
+    const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+
+    const tfBlocks = [
+      { key: 'weekly', label: 'Weekly',  icon: '🗺', divider: '═══════════════════════' },
+      { key: 'daily',  label: 'Daily',   icon: '📅', divider: '───────────────────────' },
+      { key: '4h',     label: '4H',      icon: '⏱', divider: '───────────────────────' },
+      { key: '1h',     label: '1H',      icon: '🔍', divider: '───────────────────────' },
+    ];
+
+    // Build Discord formatted message
+    const lines = [];
+    lines.push(`# 🚗 The Delivery Man — Route Analysis`);
+    lines.push(`## ${pair} · ${dateLabel}`);
+    lines.push(``);
+    lines.push(`> *Every zone is a city. Every trade is a delivery.*`);
+    lines.push(``);
+
+    tfBlocks.forEach(tf => {
+      const text = analysis[\`tf_\${tf.key}\`] || '';
+      const img  = analysis[\`img_\${tf.key}\`] || '';
+      if (!text && !img) return;
+
+      lines.push(\`\${tf.divider}\`);
+      lines.push(\`\${tf.icon} **\${tf.label} Analysis**\`);
+      lines.push(\`\${tf.divider}\`);
+
+      if (text) {
+        // Format text: lines starting with - become bullet points, others are normal
+        const formatted = text.split('\n').map(line => {
+          line = line.trim();
+          if (!line) return '';
+          if (line.startsWith('-') || line.startsWith('•')) return \`> \${line}\`;
+          if (line.toUpperCase() === line && line.length > 3) return \`**\${line}**\`;
+          return line;
+        }).filter(l => l !== null).join('\n');
+        lines.push(formatted);
+      }
+
+      if (img) {
+        lines.push(``);
+        lines.push(img); // Discord auto-embeds image URLs
+      }
+
+      lines.push(``);
+    });
+
+    lines.push(\`═══════════════════════\`);
+    lines.push(\`📍 **Pair:** \${pair} · 📅 **Date:** \${dateLabel}\`);
+    lines.push(\`🚗 *Logged via The Delivery Man — SMC Analyst Platform*\`);
+
+    const discordText = lines.join('\n');
+
+    modal.innerHTML = \`
+      <div class="modal-header">
+        <span class="modal-title">🔗 Share to Discord</span>
+        <button class="modal-close" id="dc-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="discord-preview-label">
+          <span class="form-label">Discord Format — Ready to Copy</span>
+          <span class="discord-hint">Images auto-embed when pasted in Discord</span>
+        </div>
+        <div class="discord-preview" id="dc-preview">\${this._escapeHtml(discordText)}</div>
+        <div class="discord-char-count" id="dc-chars">\${discordText.length} / 2000 chars</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="dc-close2">Close</button>
+        <button class="btn btn-discord" id="dc-copy">📋 Copy to Clipboard</button>
+      </div>
+    \`;
+
+    const close = () => { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
+    modal.querySelector('#dc-close').addEventListener('click', close);
+    modal.querySelector('#dc-close2').addEventListener('click', close);
+    overlay.addEventListener('click', close, { once: true });
+
+    modal.querySelector('#dc-copy').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(discordText);
+        const btn = modal.querySelector('#dc-copy');
+        btn.textContent = '✅ Copied!';
+        btn.style.background = '#059669';
+        setTimeout(() => {
+          btn.textContent = '📋 Copy to Clipboard';
+          btn.style.background = '';
+        }, 2000);
+      } catch(e) {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = discordText;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        modal.querySelector('#dc-copy').textContent = '✅ Copied!';
+      }
+    });
+
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+  },
+
+  _escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  },
+
+    // ── Render edit/create form ──
   renderForm(pair, date, existing, body) {
     const tfBlocks = [
       { key: 'weekly', label: 'Weekly',  icon: '🗺',  cls: 'weekly' },
