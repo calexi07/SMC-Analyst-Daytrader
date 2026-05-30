@@ -37,7 +37,22 @@ const Live = {
 
   // ── Update price badge in TF headers ──
   _updatePriceDisplay(pair) {
-    var tfs = ['weekly', 'daily', '4h', '1h'];
+    var tfs = ['weekly', 'daily', '4h', '1h', '1m'];
+
+    // Show 1m price in pair header
+    var p1m = Live.getPrice(pair, '1m');
+    var headerEl = document.getElementById('pair-live-price');
+    if (headerEl && p1m && p1m.price) {
+      var age1m = Math.floor((Date.now() - p1m.ts) / 1000);
+      var fresh1m = age1m < 120;
+      headerEl.innerHTML =
+        '<span class="live-price-val ' + (fresh1m ? 'fresh' : 'stale') + '">' +
+          parseFloat(p1m.price).toFixed(p1m.price > 100 ? 2 : 5) +
+        '</span>' +
+        '<span class="price-age">' + Live._fmtAge(age1m) + ' · 1M</span>';
+      headerEl.style.display = 'flex';
+    }
+
     tfs.forEach(function(tf) {
       var p = Live.getPrice(pair, tf);
       var el = document.getElementById('price-badge-' + tf);
@@ -47,7 +62,7 @@ const Live = {
         var fresh = age < 120;
         el.innerHTML =
           '<span class="price-val ' + (fresh ? 'fresh' : 'stale') + '">' +
-            parseFloat(p.price).toFixed(5) +
+            parseFloat(p.price).toFixed(p.price > 100 ? 2 : 5) +
           '</span>' +
           '<span class="price-age">' + Live._fmtAge(age) + '</span>';
         el.style.display = 'flex';
@@ -67,7 +82,7 @@ const Live = {
     if (!mapEl) return;
 
     // Get current price — prefer 4h
-    var pObj = Live.getPrice(pair, '4h') || Live.getPrice(pair, 'daily') || Live.getPrice(pair, '1h');
+    var pObj = Live.getPrice(pair, '1m') || Live.getPrice(pair, '4h') || Live.getPrice(pair, 'daily') || Live.getPrice(pair, '1h');
     if (!pObj || !pObj.price) {
       mapEl.innerHTML = '<div class="map-no-price">⏳ Waiting for live price...</div>';
       return;
