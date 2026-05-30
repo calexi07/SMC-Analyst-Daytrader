@@ -9,6 +9,10 @@ const Zones = {
     dashboard.innerHTML = `
       <div class="pair-header">
         <div class="pair-name">${pair}</div>
+        <div class="pair-live-price-wrap">
+          <span class="live-price-label">LIVE</span>
+          <span id="pair-live-price" class="pair-live-price" style="display:none;"></span>
+        </div>
       </div>
       <div class="pending-zones" id="pending-zones-${pair}" style="display:none;"></div>
       <div class="tf-sections" id="tf-sections"></div>
