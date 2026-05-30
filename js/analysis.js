@@ -123,8 +123,8 @@ const Analysis = {
     const tfBlocks = [
       { key: 'weekly', label: 'Weekly',  icon: '🗺' },
       { key: 'daily',  label: 'Daily',   icon: '📅' },
-      { key: 'h4',     label: '4H',      icon: '⏱' },
-      { key: 'h1',     label: '1H',      icon: '🔍' },
+      { key: '4h',     label: '4H',      icon: '⏱' },
+      { key: '1h',     label: '1H',      icon: '🔍' },
     ];
 
     body.innerHTML = `
@@ -202,8 +202,8 @@ const Analysis = {
     const tfBlocks = [
       { key: 'weekly', label: 'Weekly',  icon: '🗺',  cls: 'weekly' },
       { key: 'daily',  label: 'Daily',   icon: '📅',  cls: 'daily'  },
-      { key: 'h4',     label: '4H',      icon: '⏱',  cls: 'h4'     },
-      { key: 'h1',     label: '1H',      icon: '🔍',  cls: 'h1'     },
+      { key: '4h',     label: '4H',      icon: '⏱',  cls: 'h4'     },
+      { key: '1h',     label: '1H',      icon: '🔍',  cls: 'h1'     },
     ];
 
     body.innerHTML = `
