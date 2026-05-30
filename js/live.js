@@ -45,7 +45,7 @@ const Live = {
 
   // ── Update price badge in TF headers ──
   _updatePriceDisplay(pair) {
-    var tfs = ['weekly', 'daily', '4h', '1h', '1m'];
+    var tfs = ['weekly', 'daily', 'h4', '1h', '1m'];
 
     // Show 1m price in pair header
     var p1m = Live.getPrice(pair, '1m');
@@ -90,7 +90,7 @@ const Live = {
     if (!mapEl) return;
 
     // Get current price — prefer 1m then others
-    var pObj = Live.getPrice(pair, '1m') || Live.getPrice(pair, '4h') || Live.getPrice(pair, 'daily') || Live.getPrice(pair, '1h');
+    var pObj = Live.getPrice(pair, '1m') || Live.getPrice(pair, 'h4') || Live.getPrice(pair, 'daily') || Live.getPrice(pair, '1h');
     if (!pObj || !pObj.price) {
       mapEl.innerHTML = '<div class="map-no-price">⏳ Waiting for live price...</div>';
       return;
@@ -103,7 +103,7 @@ const Live = {
 
     // Fetch zones directly from DB (don't rely on cache)
     var allZones = [];
-    var tfs = ['weekly', 'daily', '4h'];
+    var tfs = ['weekly', 'daily', 'h4'];
     for (var i = 0; i < tfs.length; i++) {
       var tf = tfs[i];
       var zones = await DB.getZones(pair, tf);
