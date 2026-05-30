@@ -1,5 +1,13 @@
 // ── Live Price & Zone Map Module ──
 
+// Safe parse: handles both "73038.62" and "73038,62"
+function safeFloat(val) {
+  if (val === null || val === undefined || val === '') return null;
+  var str = String(val).replace(',', '.');
+  var n = parseFloat(str);
+  return isNaN(n) ? null : n;
+}
+
 const Live = {
 
   _intervals: {},
@@ -100,9 +108,9 @@ const Live = {
       var zones = JSON.parse(el.dataset.cache);
       zones.forEach(function(z) {
         if (z.status === 'broken') return;
-        if (!z.price_top && !z.price_btm) return;
-        var top = parseFloat(z.price_top || 0);
-        var btm = parseFloat(z.price_btm || 0);
+        if (!safeFloat(z.price_top) && !safeFloat(z.price_btm)) return;
+        var top = safeFloat(z.price_top) || 0;
+        var btm = safeFloat(z.price_btm) || 0;
         var mid = (top + btm) / 2 || top || btm;
         var distPips = Math.abs(currentPrice - mid) / pipSize;
         var inside = currentPrice >= btm && currentPrice <= top;
