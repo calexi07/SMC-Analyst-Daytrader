@@ -56,6 +56,18 @@ const CITY_POOLS = {
         "Shizuoka", "Sagamihara", "Okayama", "Kumamoto", "Kagoshima", "Matsuyama", "Kanazawa",
         "Utsunomiya", "Oita", "Naha", "Nagasaki", "Toyama", "Gifu"],
 
+  // ── BTCUSD ──
+  BTCUSD_bull: ["Miami", "Singapore", "Zug", "Dubai", "Lugano", "Lisbon", "Amsterdam", "Zurich",
+                "Hong Kong", "Tokyo", "Sydney", "Austin", "Denver", "Vancouver", "Tallinn",
+                "Riga", "Ljubljana", "Valletta", "Nicosia", "Panama City", "El Salvador",
+                "San Francisco", "New York", "Chicago", "London", "Geneva", "Seoul",
+                "Taipei", "Bangkok", "Kuala Lumpur"],
+  BTCUSD_bear: ["Beijing", "Moscow", "Ankara", "Cairo", "Algiers", "Dhaka", "Islamabad",
+                "Kathmandu", "Hanoi", "Jakarta", "Lagos", "Accra", "Nairobi", "Caracas",
+                "Bogota", "Lima", "Riyadh", "Tehran", "Baghdad", "Kabul",
+                "Minsk", "Tashkent", "Baku", "Yerevan", "Tbilisi", "Bishkek",
+                "Dushanbe", "Ashgabat", "Nur-Sultan", "Ulaanbaatar"],
+
   // ── XAUUSD ──
   XAUUSD_bull: ["London", "Zurich", "Singapore", "Hong Kong", "Dubai", "Shanghai", "Mumbai", "Sydney",
                 "Tokyo", "Toronto", "Frankfurt", "Paris", "Geneva", "Luxembourg", "Amsterdam",
@@ -111,6 +123,7 @@ const PAIR_CITIES = {
   XAUUSD:  { bull: CITY_POOLS.XAUUSD_bull, bear: CITY_POOLS.XAUUSD_bear },
   GER40:   { bull: CITY_POOLS.GER40_bull,  bear: CITY_POOLS.GER40_bear  },
   NAS100:  { bull: CITY_POOLS.NAS100_bull, bear: CITY_POOLS.NAS100_bear },
+  BTCUSD:  { bull: CITY_POOLS.BTCUSD_bull, bear: CITY_POOLS.BTCUSD_bear },
 };
 
 // ── Get available cities for a pair + direction, excluding active names ──
