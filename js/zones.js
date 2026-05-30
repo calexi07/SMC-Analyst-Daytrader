@@ -349,9 +349,12 @@ const Zones = {
       const btn = modal.querySelector('#zone-modal-save');
       btn.textContent = 'Saving...'; btn.disabled = true;
 
+      const top = parseFloat(modal.querySelector('#z-top')?.value) || null;
+      const btm = parseFloat(modal.querySelector('#z-btm')?.value) || null;
       const zone = await DB.addZone({
         pair, timeframe, name, status, direction,
-        zone_date: date || null, test_count: tests
+        zone_date: date || null, test_count: tests,
+        price_top: top, price_btm: btm
       });
 
       if (zone) { close(); await this.loadZones(pair, timeframe); }
@@ -365,6 +368,22 @@ const Zones = {
   openEditModal(zone) {
     const modal   = document.getElementById('zone-modal');
     const overlay = document.getElementById('modal-overlay');
+    const pair    = zone.pair;
+    const hasCities = !!PAIR_CITIES[pair];
+
+    // Build city dropdown — include current name even if used
+    let cityOptions = '';
+    if (hasCities) {
+      const dir = zone.direction || 'bull';
+      const pool = dir === 'bull' ? PAIR_CITIES[pair].bull : PAIR_CITIES[pair].bear;
+      const used = Zones._getActiveCities(pair).filter(n => n !== zone.name);
+      cityOptions = pool
+        .filter(c => !used.includes(c))
+        .map(c => `<option value="${c}" ${c === zone.name ? 'selected' : ''}>${c}</option>`)
+        .join('');
+    }
+
+    const priceStep = (zone.price_top && zone.price_top > 100) ? '1' : '0.00001';
 
     modal.innerHTML = `
       <div class="modal-header">
@@ -372,10 +391,17 @@ const Zones = {
         <button class="modal-close" id="zone-modal-close">✕</button>
       </div>
       <div class="modal-body">
+        ${hasCities ? `
+        <div class="form-group">
+          <label class="form-label">City Name</label>
+          <select class="form-select" id="z-city">${cityOptions}</select>
+        </div>
+        ` : `
         <div class="form-group">
           <label class="form-label">Zone Name</label>
           <input class="form-input" id="z-name" value="${zone.name}" />
         </div>
+        `}
         <div class="form-group">
           <label class="form-label">Date Created</label>
           <input class="form-input" id="z-date" type="date" value="${zone.zone_date ? zone.zone_date.slice(0,10) : ''}" />
@@ -395,6 +421,18 @@ const Zones = {
             <span class="tests-label">times</span>
           </div>
         </div>
+        <div class="setup-row-2" style="grid-template-columns:1fr 1fr;">
+          <div class="form-group">
+            <label class="form-label">Price Top</label>
+            <input class="form-input" id="z-top" type="number" step="${priceStep}"
+              value="${zone.price_top || ''}" placeholder="${zone.price_top > 100 ? '73500' : '1.08500'}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Price Bottom</label>
+            <input class="form-input" id="z-btm" type="number" step="${priceStep}"
+              value="${zone.price_btm || ''}" placeholder="${zone.price_btm > 100 ? '73200' : '1.08200'}" />
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="zone-modal-cancel">Cancel</button>
@@ -412,16 +450,27 @@ const Zones = {
     overlay.addEventListener('click', close, { once: true });
 
     modal.querySelector('#zone-modal-save').addEventListener('click', async () => {
-      const name   = modal.querySelector('#z-name').value.trim();
       const status = modal.querySelector('#z-status').value;
       const date   = modal.querySelector('#z-date').value;
       const tests  = status === 'tested' ? parseInt(modal.querySelector('#z-tests').value) || 1 : 0;
+      const top    = parseFloat(modal.querySelector('#z-top').value) || null;
+      const btm    = parseFloat(modal.querySelector('#z-btm').value) || null;
+
+      let name;
+      if (hasCities) {
+        name = modal.querySelector('#z-city').value;
+      } else {
+        name = modal.querySelector('#z-name').value.trim();
+      }
       if (!name) { alert('Please enter a zone name.'); return; }
 
       const btn = modal.querySelector('#zone-modal-save');
       btn.textContent = 'Saving...'; btn.disabled = true;
 
-      const updated = await DB.updateZone(zone.id, { name, status, zone_date: date || null, test_count: tests });
+      const updated = await DB.updateZone(zone.id, {
+        name, status, zone_date: date || null, test_count: tests,
+        price_top: top, price_btm: btm
+      });
       if (updated) { close(); await this.loadZones(zone.pair, zone.timeframe); }
       else { btn.textContent = 'Save Changes'; btn.disabled = false; }
     });
