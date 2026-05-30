@@ -12,7 +12,7 @@ const RoadMap = {
   render(mapEl, zones, currentPrice, pObj, pipSize) {
     var decimals = currentPrice > 100 ? 2 : 5;
     var W = mapEl.offsetWidth || 700;
-    var H = 220;
+    var H = 320;
 
     // Price range
     var allPrices = zones.map(function(z) { return z.mid; }).concat([currentPrice]);
@@ -22,8 +22,8 @@ const RoadMap = {
     maxP += pad; minP -= pad;
     var range = maxP - minP || 1;
 
-    var roadY   = 130;   // center of road
-    var roadH   = 44;
+    var roadY   = 180;   // center of road
+    var roadH   = 54;
     var roadTop = roadY - roadH / 2;
 
     function priceToX(p) {
@@ -35,14 +35,10 @@ const RoadMap = {
     // Init clouds + trees once
     if (!RoadMap._initialized || RoadMap._clouds.length === 0) {
       RoadMap._clouds = [];
-      RoadMap._trees  = [];
       for (var i = 0; i < 5; i++) {
         RoadMap._clouds.push({ x: Math.random() * W, y: 20 + Math.random() * 40, r: 18 + Math.random() * 18, speed: 0.15 + Math.random() * 0.2 });
       }
-      for (var j = 0; j < 8; j++) {
-        var side = j % 2;
-        RoadMap._trees.push({ x: 60 + j * (W/8), y: side ? roadTop - 8 : roadTop + roadH + 8, h: 28 + Math.random() * 18, side: side });
-      }
+
       RoadMap._truckX  = truckTargetX;
       RoadMap._initialized = true;
     }
@@ -117,32 +113,7 @@ const RoadMap = {
       ctx.fill();
     });
 
-    // Trees (above road)
-    RoadMap._trees.forEach(function(t) {
-      if (t.side === 0) {
-        // Tree above road
-        ctx.fillStyle = '#4d7c0f';
-        ctx.beginPath();
-        ctx.moveTo(t.x, roadTop - t.h - 8);
-        ctx.lineTo(t.x - 12, roadTop - 8);
-        ctx.lineTo(t.x + 12, roadTop - 8);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#713f12';
-        ctx.fillRect(t.x - 3, roadTop - 8, 6, 8);
-      } else {
-        // Tree below road
-        ctx.fillStyle = '#4d7c0f';
-        ctx.beginPath();
-        ctx.moveTo(t.x, roadTop + roadH + t.h + 8);
-        ctx.lineTo(t.x - 12, roadTop + roadH + 8);
-        ctx.lineTo(t.x + 12, roadTop + roadH + 8);
-        ctx.closePath();
-        ctx.fill();
-        ctx.fillStyle = '#713f12';
-        ctx.fillRect(t.x - 3, roadTop + roadH, 6, 8);
-      }
-    });
+
 
     // Road surface
     var roadGrad = ctx.createLinearGradient(0, roadTop, 0, roadTop + roadH);
@@ -162,7 +133,7 @@ const RoadMap = {
     ctx.strokeStyle = 'rgba(255,255,255,0.6)';
     ctx.lineWidth = 2;
     ctx.setLineDash([20, 20]);
-    ctx.lineDashOffset = -dashOffset;
+    ctx.lineDashOffset = dashOffset;
     ctx.beginPath(); ctx.moveTo(0, roadY); ctx.lineTo(W, roadY); ctx.stroke();
     ctx.setLineDash([]);
 
