@@ -1260,3 +1260,50 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
   .analysis-topbar { flex-direction: column; align-items: flex-start; }
   .dash-hero::before { display: none; }
 }
+
+/* ══════════════════════════════════
+   DISCORD SHARE
+══════════════════════════════════ */
+.btn-discord {
+  background: #5865F2;
+  color: #fff;
+  border: none;
+}
+.btn-discord:hover { background: #4752c4; }
+
+.discord-preview-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.discord-hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted2);
+  letter-spacing: 0.08em;
+}
+
+.discord-preview {
+  background: #36393f;
+  color: #dcddde;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #202225;
+  white-space: pre-wrap;
+  max-height: 400px;
+  overflow-y: auto;
+  word-break: break-word;
+}
+
+.discord-char-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted2);
+  text-align: right;
+  margin-top: 6px;
+  letter-spacing: 0.08em;
+}
