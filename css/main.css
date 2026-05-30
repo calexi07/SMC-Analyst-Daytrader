@@ -1780,7 +1780,7 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
   overflow: hidden;
   border-radius: 0 0 var(--radius) var(--radius);
   background: #bfdbfe;
-  min-height: 220px;
+  min-height: 320px;
   position: relative;
 }
 .road-wrap {
