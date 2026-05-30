@@ -1,5 +1,4 @@
 // ── Database Layer ──
-// All Supabase interactions go here. No UI logic.
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_ANON);
@@ -41,14 +40,13 @@ const DB = {
   },
 
   async deleteZone(id) {
-    // Also delete comments
     await db.from('zone_comments').delete().eq('zone_id', id);
     const { error } = await db.from('zones').delete().eq('id', id);
     if (error) { console.error('deleteZone:', error); return false; }
     return true;
   },
 
-  // ── COMMENTS ──
+  // ── COMMENTS / SETUPS ──
 
   async getComments(zoneId) {
     const { data, error } = await db
@@ -57,17 +55,6 @@ const DB = {
       .eq('zone_id', zoneId)
       .order('created_at', { ascending: true });
     if (error) { console.error('getComments:', error); return []; }
-    return data;
-  },
-
-  async updateComment(id, updates) {
-    const { data, error } = await db
-      .from("zone_comments")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) { console.error("updateComment:", error); return null; }
     return data;
   },
 
@@ -81,26 +68,22 @@ const DB = {
     return data;
   },
 
+  async updateComment(id, updates) {
+    const { data, error } = await db
+      .from('zone_comments')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) { console.error('updateComment:', error); return null; }
+    return data;
+  },
+
   async deleteComment(id) {
     const { error } = await db.from('zone_comments').delete().eq('id', id);
     if (error) { console.error('deleteComment:', error); return false; }
     return true;
   },
-
-  // ── STORAGE (images) ──
-
-  async uploadImage(file) {
-    const ext  = file.name.split('.').pop();
-    const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { data, error } = await db.storage
-      .from('zone-images')
-      .upload(name, file, { cacheControl: '3600', upsert: false });
-    if (error) { console.error('uploadImage:', error); return null; }
-    const { data: urlData } = db.storage.from('zone-images').getPublicUrl(name);
-    return urlData.publicUrl;
-  },
-
-};
 
   // ── PAIR ANALYSIS ──
 
@@ -126,7 +109,6 @@ const DB = {
   },
 
   async saveAnalysis(pair, date, fields) {
-    // Upsert by pair + date
     const { data: existing } = await db
       .from('pair_analysis')
       .select('id')
@@ -139,14 +121,16 @@ const DB = {
         .from('pair_analysis')
         .update({ ...fields, updated_at: new Date().toISOString() })
         .eq('id', existing.id)
-        .select().single();
+        .select()
+        .single();
       if (error) { console.error('saveAnalysis update:', error); return null; }
       return data;
     } else {
       const { data, error } = await db
         .from('pair_analysis')
         .insert([{ pair, analysis_date: date, ...fields }])
-        .select().single();
+        .select()
+        .single();
       if (error) { console.error('saveAnalysis insert:', error); return null; }
       return data;
     }
@@ -157,3 +141,15 @@ const DB = {
     if (error) { console.error('deleteAnalysis:', error); return false; }
     return true;
   },
+
+  // ── DASHBOARD ──
+
+  async getAllSetups() {
+    const { data, error } = await db
+      .from('zone_comments')
+      .select('text, created_at');
+    if (error) { console.error('getAllSetups:', error); return []; }
+    return data || [];
+  },
+
+};
