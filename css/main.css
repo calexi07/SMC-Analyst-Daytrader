@@ -1540,3 +1540,42 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
 .vs-val.mono { font-family: var(--mono); font-size: 12px; }
 .text-bull { color: var(--fresh); font-weight: 700; }
 .text-bear { color: var(--danger); font-weight: 700; }
+
+/* ── PAIR LIVE PRICE ── */
+.pair-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.pair-live-price-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.live-price-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--fresh);
+  background: var(--fresh-bg);
+  border: 1px solid var(--fresh-border);
+  padding: 2px 6px;
+  border-radius: 3px;
+  animation: pulse 2s infinite;
+}
+.pair-live-price {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.live-price-val {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+.live-price-val.fresh { color: var(--fresh); }
+.live-price-val.stale { color: var(--muted); }
