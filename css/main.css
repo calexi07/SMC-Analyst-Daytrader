@@ -2097,3 +2097,25 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
   text-align: center;
   letter-spacing: 0.05em;
 }
+
+/* ── TF HEADER RIGHT ── */
+.tf-header { justify-content: space-between; }
+.tf-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn-discord-tf {
+  background: #5865F2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: var(--mono);
+  letter-spacing: 0.05em;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.tf-header:hover .btn-discord-tf { opacity: 1; }
+.btn-discord-tf:hover { background: #4752c4; }
