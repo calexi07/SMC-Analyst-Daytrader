@@ -2119,3 +2119,11 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
 }
 .tf-header:hover .btn-discord-tf { opacity: 1; }
 .btn-discord-tf:hover { background: #4752c4; }
+
+/* ── PAIR HEADER RIGHT ── */
+.pair-header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
