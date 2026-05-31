@@ -21,7 +21,7 @@ const RoadMap = {
     var decimals = currentPrice > 100 ? 2 : 5;
     var W = mapEl.offsetWidth || 700;
     var H = 320;
-    var WORLD_W = W * 3; // world is 3x viewport wide
+    var WORLD_W = W * 6; // world is 6x viewport wide for more drag space
 
     // Track price history for direction
     var now = Date.now();
@@ -56,7 +56,7 @@ const RoadMap = {
     // Init pan to center truck in viewport
     if (!RoadMap._initialized || RoadMap._clouds.length === 0) {
       RoadMap._clouds = [];
-      for (var i = 0; i < 8; i++) {
+      for (var i = 0; i < 16; i++) {
         RoadMap._clouds.push({
           wx: Math.random() * WORLD_W,
           y: 20 + Math.random() * 50,
@@ -121,7 +121,12 @@ const RoadMap = {
     var roadTop = RoadMap._roadTop;
     var roadH   = RoadMap._roadH;
     var roadY   = RoadMap._roadY;
-    var pan     = RoadMap._panOffset;
+    // Clamp pan so world always fills viewport (infinite feel)
+    var maxPan = 0;
+    var minPan = -(WORLD_W - W);
+    if (RoadMap._panOffset > maxPan) RoadMap._panOffset = maxPan;
+    if (RoadMap._panOffset < minPan) RoadMap._panOffset = minPan;
+    var pan = RoadMap._panOffset;
     var dir     = RoadMap._direction;
 
     // Ease truck
@@ -130,8 +135,8 @@ const RoadMap = {
     // Animate clouds in world space (wrap around world)
     RoadMap._clouds.forEach(function(c) {
       c.wx -= c.speed * dir * -1; // clouds move opposite to direction for parallax
-      if (c.wx < -100) c.wx = WORLD_W + 100;
-      if (c.wx > WORLD_W + 100) c.wx = -100;
+      if (c.wx < 0) c.wx = WORLD_W;
+      if (c.wx > WORLD_W) c.wx = 0;
     });
 
     // Dash animation
@@ -151,14 +156,14 @@ const RoadMap = {
     sky.addColorStop(0, '#bfdbfe');
     sky.addColorStop(1, '#dbeafe');
     ctx.fillStyle = sky;
-    ctx.fillRect(-pan, 0, W, roadTop); // fill viewport sky always
+    ctx.fillRect(0, 0, WORLD_W, roadTop); // fill entire world
 
     // Ground
     var ground = ctx.createLinearGradient(0, roadTop + roadH, 0, H);
     ground.addColorStop(0, '#86efac');
     ground.addColorStop(1, '#4ade80');
     ctx.fillStyle = ground;
-    ctx.fillRect(-pan, roadTop + roadH, W, H - roadTop - roadH);
+    ctx.fillRect(0, roadTop + roadH, WORLD_W, H - roadTop - roadH);
 
     // Clouds
     RoadMap._clouds.forEach(function(c) {
