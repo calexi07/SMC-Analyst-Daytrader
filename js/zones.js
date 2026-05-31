@@ -180,13 +180,22 @@ const Zones = {
         </div>
       </div>
       <div class="zone-comments" id="comments-${zone.id}">
-        <div class="comments-header">
-          <span class="comments-title">Jobs</span>
+        <div class="zone-tabs">
+          <button class="zone-tab active" data-tab="setups" data-zone="${zone.id}">🚗 Jobs</button>
+          <button class="zone-tab" data-tab="analysis" data-zone="${zone.id}">📋 Analysis</button>
         </div>
-        <div class="comment-list" id="comment-list-${zone.id}">
-          <div class="loader">Loading...</div>
+        <div class="zone-tab-panel" id="tab-setups-${zone.id}">
+          <div class="comment-list" id="comment-list-${zone.id}">
+            <div class="loader">Loading...</div>
+          </div>
+          <button class="btn-add-setup" data-zone="${zone.id}">+ Log Setup</button>
         </div>
-        <button class="btn-add-setup" data-zone="${zone.id}">+ Log Setup</button>
+        <div class="zone-tab-panel hidden" id="tab-analysis-${zone.id}">
+          <div class="zone-analysis-list" id="analysis-list-${zone.id}">
+            <div class="loader">Loading...</div>
+          </div>
+          <button class="btn-add-setup btn-add-analysis" data-zone="${zone.id}">+ Log Analysis</button>
+        </div>
       </div>
     `;
 
@@ -221,6 +230,24 @@ const Zones = {
 
     card.querySelector('.btn-add-setup').addEventListener('click', () => {
       Setups.openModal(zone.id, zone.pair);
+    });
+
+    card.querySelector('.btn-add-analysis').addEventListener('click', () => {
+      ZoneAnalysis.openModal(zone.id);
+    });
+
+    // Tab switching
+    card.querySelectorAll('.zone-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tabName = tab.dataset.tab;
+        const zId = tab.dataset.zone;
+        card.querySelectorAll('.zone-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-setups-'   + zId)?.classList.toggle('hidden', tabName !== 'setups');
+        document.getElementById('tab-analysis-' + zId)?.classList.toggle('hidden', tabName !== 'analysis');
+        if (tabName === 'analysis') ZoneAnalysis.loadAnalyses(zId);
+      });
     });
 
     return card;
