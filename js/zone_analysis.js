@@ -1,5 +1,6 @@
 // ── Zone Analysis Module ──
-// Sessions with date + multiple text/chart entries per session
+// Each session = one DB row with JSON content
+// Can edit/delete entire session
 
 const ZoneAnalysis = {
 
@@ -12,25 +13,13 @@ const ZoneAnalysis = {
       .from('zone_analyses')
       .select('*')
       .eq('zone_id', zoneId)
-      .order('session_date', { ascending: false })
-      .order('created_at',   { ascending: false });
+      .order('session_date', { ascending: false });
 
     if (error) { console.error(error); return; }
     if (!data || data.length === 0) {
       list.innerHTML = '<div class="loader" style="padding:10px 0; font-size:11px;">No analysis logged yet</div>';
       return;
     }
-
-    // Group by session_date
-    var sessions = {};
-    var order = [];
-    data.forEach(function(item) {
-      var key = item.session_date || item.created_at.slice(0,10);
-      if (!sessions[key]) { sessions[key] = []; order.push(key); }
-      // Put context items first
-      if (item.text === '__context__') sessions[key].unshift(item);
-      else sessions[key].push(item);
-    });
 
     list.innerHTML = '';
 
@@ -42,329 +31,308 @@ const ZoneAnalysis = {
     shareBtn.addEventListener('click', function() { ZoneAnalysis.shareAllToDiscord(data); });
     list.appendChild(shareBtn);
 
-    // Render sessions
-    order.forEach(function(dateKey) {
-      var items = sessions[dateKey];
-      var dateLabel = new Date(dateKey + 'T00:00:00').toLocaleDateString('en-GB', {
-        weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
-      });
-
-      var session = document.createElement('div');
-      session.className = 'za-session';
-      session.innerHTML =
-        '<div class="za-session-header">' +
-          '<span class="za-session-date">📅 ' + dateLabel + '</span>' +
-          '<button class="btn-icon za-session-discord" title="Share this session">🔗</button>' +
-        '</div>' +
-        '<div class="za-session-entries" id="za-entries-' + dateKey.replace(/-/g,'') + zoneId + '"></div>';
-
-      var entriesEl = session.querySelector('.za-session-entries');
-      items.forEach(function(item) {
-        entriesEl.appendChild(ZoneAnalysis.buildEntry(item, zoneId));
-      });
-
-      session.querySelector('.za-session-discord').addEventListener('click', function() {
-        ZoneAnalysis.shareSessionToDiscord(items, dateLabel);
-      });
-
-      list.appendChild(session);
+    data.forEach(function(row) {
+      list.appendChild(ZoneAnalysis.buildSession(row, zoneId));
     });
   },
 
-  buildEntry(item, zoneId) {
-    var el = document.createElement('div');
+  buildSession(row, zoneId) {
+    var content = {};
+    try { content = JSON.parse(row.text || '{}'); } catch(e) {}
 
-    // Context image — special rendering
-    if (item.text === '__context__' && item.image_url) {
-      el.className = 'za-context-entry';
-      el.innerHTML =
-        '<div class="za-context-label">🖼 Context</div>' +
-        '<img class="za-context-img" src="' + item.image_url + '" loading="lazy" />' +
-        '<button class="btn-icon del za-del" title="Delete context" style="margin-top:4px;">✕ Remove context</button>';
-      el.querySelector('.za-del').addEventListener('click', async function() {
-        if (!confirm('Remove context image?')) return;
-        await db.from('zone_analyses').delete().eq('id', item.id);
-        ZoneAnalysis.loadAnalyses(zoneId);
+    var dateLabel = row.session_date
+      ? new Date(row.session_date + 'T00:00:00').toLocaleDateString('en-GB', {
+          weekday: 'short', day: '2-digit', month: 'short', year: 'numeric'
+        })
+      : '—';
+
+    var el = document.createElement('div');
+    el.className = 'za-session';
+    el.dataset.id = row.id;
+
+    // Context image
+    var contextHtml = content.context_url
+      ? '<div class="za-context-entry"><div class="za-context-label">🖼 Context</div><img class="za-context-img" src="' + content.context_url + '" loading="lazy" /></div>'
+      : '';
+
+    // Entries
+    var entriesHtml = '';
+    if (content.entries && content.entries.length > 0) {
+      content.entries.forEach(function(entry, i) {
+        if (!entry.text && !entry.url) return;
+        entriesHtml +=
+          '<div class="za-entry">' +
+            (entry.text ? '<div class="za-text">' + ZoneAnalysis._escape(entry.text) + '</div>' : '') +
+            (entry.url  ? '<img class="comment-img za-img" src="' + entry.url + '" loading="lazy" />' : '') +
+          '</div>';
       });
-      el.querySelector('.za-context-img').addEventListener('click', function() {
+    }
+
+    el.innerHTML =
+      '<div class="za-session-header">' +
+        '<span class="za-session-date">📅 ' + dateLabel + '</span>' +
+        '<div style="display:flex;gap:5px;">' +
+          '<button class="btn-icon za-session-discord" title="Share session" style="color:#5865F2;">🔗</button>' +
+          '<button class="btn-icon za-session-edit" title="Edit session">✎</button>' +
+          '<button class="btn-icon del za-session-del" title="Delete session">✕</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="za-session-entries">' +
+        contextHtml +
+        (entriesHtml || '<div class="loader" style="padding:6px 0; font-size:11px;">No entries</div>') +
+      '</div>';
+
+    // Lightbox on images
+    el.querySelectorAll('.za-context-img, .za-img').forEach(function(img) {
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', function() {
         var lb = document.createElement('div');
         lb.className = 'lightbox';
-        lb.innerHTML = '<img src="' + item.image_url + '" />';
+        lb.innerHTML = '<img src="' + img.src + '" />';
         lb.addEventListener('click', function() { lb.remove(); });
         document.body.appendChild(lb);
       });
-      return el;
-    }
+    });
 
-    el.className = 'za-entry';
-    var ts = new Date(item.created_at).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+    // Edit
+    el.querySelector('.za-session-edit').addEventListener('click', function() {
+      ZoneAnalysis.openModal(zoneId, row);
+    });
 
-    el.innerHTML =
-      '<div class="za-entry-header">' +
-        '<span class="za-entry-time">' + ts + '</span>' +
-        '<button class="btn-icon del za-del" title="Delete entry">✕</button>' +
-      '</div>' +
-      (item.text ? '<div class="za-text">' + ZoneAnalysis._escape(item.text) + '</div>' : '') +
-      (item.image_url ? '<img class="comment-img za-img" src="' + item.image_url + '" loading="lazy" />' : '');
-
-    el.querySelector('.za-del').addEventListener('click', async function() {
-      if (!confirm('Delete this entry?')) return;
-      await db.from('zone_analyses').delete().eq('id', item.id);
+    // Delete
+    el.querySelector('.za-session-del').addEventListener('click', async function() {
+      if (!confirm('Delete this entire session?')) return;
+      await db.from('zone_analyses').delete().eq('id', row.id);
       ZoneAnalysis.loadAnalyses(zoneId);
     });
 
-    var img = el.querySelector('.za-img');
-    if (img) img.addEventListener('click', function() {
-      var lb = document.createElement('div');
-      lb.className = 'lightbox';
-      lb.innerHTML = '<img src="' + item.image_url + '" />';
-      lb.addEventListener('click', function() { lb.remove(); });
-      document.body.appendChild(lb);
+    // Discord share
+    el.querySelector('.za-session-discord').addEventListener('click', function() {
+      ZoneAnalysis.shareSessionToDiscord(content, dateLabel);
     });
 
     return el;
   },
 
-  openModal(zoneId) {
+  openModal(zoneId, existingRow) {
     var modal   = document.getElementById('comment-modal');
     var overlay = document.getElementById('modal-overlay');
+    var isEdit  = !!existingRow;
 
-    // Build initial state: 1 session with 1 entry
-    var sessions = [{ date: new Date().toISOString().slice(0,10), context_url: '', entries: [{ text: '', url: '' }] }];
+    // Load existing content or start fresh
+    var sessionDate = isEdit
+      ? (existingRow.session_date || new Date().toISOString().slice(0,10))
+      : new Date().toISOString().slice(0,10);
 
-    function renderModal() {
+    var state = { context_url: '', entries: [{ text: '', url: '' }] };
+    if (isEdit) {
+      try { state = JSON.parse(existingRow.text || '{}'); } catch(e) {}
+      if (!state.entries) state.entries = [{ text: '', url: '' }];
+      if (!state.context_url) state.context_url = '';
+    }
+
+    function renderBody() {
+      var entryHtml = state.entries.map(function(entry, ei) {
+        return '<div class="za-modal-entry" data-ei="' + ei + '">' +
+          '<textarea class="form-textarea za-entry-text" placeholder="Analysis text..." style="min-height:80px;">' + (entry.text || '') + '</textarea>' +
+          '<input class="form-input za-entry-url" placeholder="TradingView chart URL (optional)" value="' + (entry.url || '') + '" />' +
+          (entry.url ? '<div class="za-url-preview-wrap"><img class="upload-preview" src="' + entry.url + '" style="display:block;max-height:120px;" /></div>' : '') +
+          (state.entries.length > 1
+            ? '<div class="za-entry-actions"><button class="btn-icon del za-remove-entry" data-ei="' + ei + '">✕ Remove this entry</button></div>'
+            : '') +
+        '</div>' +
+        (ei < state.entries.length - 1 ? '<div class="za-entry-divider"></div>' : '');
+      }).join('');
+
+      return '<div class="form-group">' +
+          '<label class="form-label">📅 Session Date</label>' +
+          '<input class="form-input" id="za-date" type="date" value="' + sessionDate + '" />' +
+        '</div>' +
+        '<div class="za-context-section">' +
+          '<label class="form-label" style="margin-bottom:5px;display:block;">🖼 Context Chart (overview)</label>' +
+          '<input class="form-input" id="za-context" placeholder="TradingView context URL..." value="' + (state.context_url || '') + '" />' +
+          (state.context_url ? '<div class="za-url-preview-wrap" style="margin-top:6px;"><img class="upload-preview" id="za-context-preview" src="' + state.context_url + '" style="display:block;max-height:140px;" /></div>' : '<div class="za-url-preview-wrap" style="display:none;margin-top:6px;"><img class="upload-preview" id="za-context-preview" src="" style="max-height:140px;" /></div>') +
+        '</div>' +
+        '<div id="za-entries-wrap">' + entryHtml + '</div>' +
+        '<button class="za-add-entry" id="za-add-entry-btn">+ Add entry</button>';
+    }
+
+    function buildModal() {
       modal.innerHTML =
         '<div class="modal-header">' +
-          '<span class="modal-title">📋 Log Zone Analysis</span>' +
+          '<span class="modal-title">' + (isEdit ? '✎ Edit' : '📋 Log') + ' Zone Analysis</span>' +
           '<button class="modal-close" id="za-close">✕</button>' +
         '</div>' +
-        '<div class="modal-body" id="za-modal-body">' +
-          renderSessions() +
-          '<button class="za-add-session" id="za-add-session">+ Add Session</button>' +
-        '</div>' +
+        '<div class="modal-body" id="za-body">' + renderBody() + '</div>' +
         '<div class="modal-footer">' +
           '<button class="btn btn-secondary" id="za-cancel">Cancel</button>' +
-          '<button class="btn btn-primary" id="za-save">💾 Save All</button>' +
+          '<button class="btn btn-primary" id="za-save">' + (isEdit ? '💾 Update' : '💾 Save') + '</button>' +
         '</div>';
 
-      wireEvents();
+      wireModal();
     }
 
-    function renderSessions() {
-      return sessions.map(function(session, si) {
-        var entries = session.entries.map(function(entry, ei) {
-          return '<div class="za-modal-entry" data-si="' + si + '" data-ei="' + ei + '">' +
-            '<textarea class="form-textarea za-entry-text" placeholder="Analysis text..." style="min-height:80px;">' + (entry.text || '') + '</textarea>' +
-            '<input class="form-input za-entry-url" placeholder="TradingView URL (optional)" value="' + (entry.url || '') + '" />' +
-            (entry.url ? '<div class="za-url-preview-wrap"><img class="upload-preview za-url-preview" src="' + entry.url + '" style="display:block; max-height:120px;" /></div>' : '') +
-            '<div class="za-entry-actions">' +
-              (session.entries.length > 1 ? '<button class="btn-icon del za-remove-entry" data-si="' + si + '" data-ei="' + ei + '">✕ Remove</button>' : '') +
-            '</div>' +
-          '</div>';
-        }).join('<div class="za-entry-divider"></div>');
-
-        return '<div class="za-modal-session" data-si="' + si + '">' +
-          '<div class="za-modal-session-header">' +
-            '<label class="form-label">📅 Session Date</label>' +
-            (sessions.length > 1 ? '<button class="btn-icon del za-remove-session" data-si="' + si + '">✕ Remove session</button>' : '') +
-          '</div>' +
-          '<input class="form-input za-session-date" type="date" value="' + session.date + '" data-si="' + si + '" style="margin-bottom:10px;" />' +
-          '<div class="za-context-section">' +
-            '<label class="form-label" style="margin-bottom:5px; display:block;">🖼 Context Chart (overview)</label>' +
-            '<input class="form-input za-context-url" placeholder="TradingView context URL..." value="' + (session.context_url || '') + '" data-si="' + si + '" />' +
-            (session.context_url ? '<div class="za-url-preview-wrap" style="margin-top:6px;"><img class="upload-preview" src="' + session.context_url + '" style="display:block; max-height:140px;" /></div>' : '') +
-          '</div>' +
-          entries +
-          '<button class="za-add-entry" data-si="' + si + '">+ Add entry</button>' +
-        '</div>';
-      }).join('<div class="za-session-divider"></div>');
-    }
-
-    function wireEvents() {
+    function wireModal() {
       var close = function() { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
       modal.querySelector('#za-close').addEventListener('click', close);
       modal.querySelector('#za-cancel').addEventListener('click', close);
       overlay.addEventListener('click', close, { once: true });
 
-      // Sync text inputs to state
-      modal.querySelectorAll('.za-entry-text').forEach(function(el) {
-        var si = parseInt(el.closest('.za-modal-entry').dataset.si);
-        var ei = parseInt(el.closest('.za-modal-entry').dataset.ei);
-        el.addEventListener('input', function() { sessions[si].entries[ei].text = el.value; });
+      // Date
+      modal.querySelector('#za-date').addEventListener('change', function(e) { sessionDate = e.target.value; });
+
+      // Context URL
+      modal.querySelector('#za-context').addEventListener('input', function(e) {
+        state.context_url = e.target.value.trim();
+        var wrap = modal.querySelector('.za-url-preview-wrap');
+        var preview = modal.querySelector('#za-context-preview');
+        if (state.context_url) {
+          wrap.style.display = 'block';
+          preview.src = state.context_url;
+        } else {
+          wrap.style.display = 'none';
+        }
       });
 
-      modal.querySelectorAll('.za-entry-url').forEach(function(el) {
-        var si = parseInt(el.closest('.za-modal-entry').dataset.si);
-        var ei = parseInt(el.closest('.za-modal-entry').dataset.ei);
-        el.addEventListener('input', function() {
-          sessions[si].entries[ei].url = el.value.trim();
-          // Live preview
-          var wrap = el.nextElementSibling;
-          if (wrap && wrap.classList.contains('za-url-preview-wrap')) {
-            wrap.querySelector('img').src = el.value.trim();
-          } else if (el.value.trim()) {
-            var preview = document.createElement('div');
-            preview.className = 'za-url-preview-wrap';
-            preview.innerHTML = '<img class="upload-preview za-url-preview" src="' + el.value.trim() + '" style="display:block; max-height:120px;" />';
-            el.insertAdjacentElement('afterend', preview);
+      // Delegated events on entries wrap
+      var wrap = document.getElementById('za-entries-wrap');
+      wrap.addEventListener('input', function(e) {
+        var entry = e.target.closest('.za-modal-entry');
+        if (!entry) return;
+        var ei = parseInt(entry.dataset.ei);
+        if (e.target.classList.contains('za-entry-text')) {
+          state.entries[ei].text = e.target.value;
+        }
+        if (e.target.classList.contains('za-entry-url')) {
+          state.entries[ei].url = e.target.value.trim();
+          var pw = e.target.nextElementSibling;
+          if (pw && pw.classList.contains('za-url-preview-wrap')) {
+            pw.querySelector('img').src = state.entries[ei].url;
+          } else if (state.entries[ei].url) {
+            var p = document.createElement('div');
+            p.className = 'za-url-preview-wrap';
+            p.innerHTML = '<img class="upload-preview" src="' + state.entries[ei].url + '" style="display:block;max-height:120px;" />';
+            e.target.insertAdjacentElement('afterend', p);
           }
-        });
+        }
       });
 
-      modal.querySelectorAll('.za-session-date').forEach(function(el) {
-        var si = parseInt(el.dataset.si);
-        el.addEventListener('change', function() { sessions[si].date = el.value; });
-      });
-
-      modal.querySelectorAll('.za-context-url').forEach(function(el) {
-        var si = parseInt(el.dataset.si);
-        el.addEventListener('input', function() {
-          sessions[si].context_url = el.value.trim();
-          var wrap = el.nextElementSibling;
-          if (wrap && wrap.classList.contains('za-url-preview-wrap')) {
-            wrap.querySelector('img').src = el.value.trim();
-          } else if (el.value.trim()) {
-            var preview = document.createElement('div');
-            preview.className = 'za-url-preview-wrap';
-            preview.style.marginTop = '6px';
-            preview.innerHTML = '<img class="upload-preview" src="' + el.value.trim() + '" style="display:block; max-height:140px;" />';
-            el.insertAdjacentElement('afterend', preview);
-          }
-        });
+      wrap.addEventListener('click', function(e) {
+        var removeBtn = e.target.closest('.za-remove-entry');
+        if (removeBtn) {
+          var ei = parseInt(removeBtn.dataset.ei);
+          state.entries.splice(ei, 1);
+          document.getElementById('za-body').innerHTML = renderBody();
+          wireModal();
+        }
       });
 
       // Add entry
-      modal.querySelectorAll('.za-add-entry').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var si = parseInt(btn.dataset.si);
-          sessions[si].entries.push({ text: '', url: '' });
-          document.getElementById('za-modal-body').innerHTML = renderSessions() + '<button class="za-add-session" id="za-add-session">+ Add Session</button>';
-          wireEvents();
-        });
+      document.getElementById('za-add-entry-btn').addEventListener('click', function() {
+        state.entries.push({ text: '', url: '' });
+        document.getElementById('za-body').innerHTML = renderBody();
+        wireModal();
       });
 
-      // Remove entry
-      modal.querySelectorAll('.za-remove-entry').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var si = parseInt(btn.dataset.si);
-          var ei = parseInt(btn.dataset.ei);
-          sessions[si].entries.splice(ei, 1);
-          document.getElementById('za-modal-body').innerHTML = renderSessions() + '<button class="za-add-session" id="za-add-session">+ Add Session</button>';
-          wireEvents();
-        });
-      });
-
-      // Add session
-      document.getElementById('za-add-session').addEventListener('click', function() {
-        sessions.push({ date: new Date().toISOString().slice(0,10), entries: [{ text: '', url: '' }] });
-        document.getElementById('za-modal-body').innerHTML = renderSessions() + '<button class="za-add-session" id="za-add-session">+ Add Session</button>';
-        wireEvents();
-      });
-
-      // Remove session
-      modal.querySelectorAll('.za-remove-session').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var si = parseInt(btn.dataset.si);
-          sessions.splice(si, 1);
-          document.getElementById('za-modal-body').innerHTML = renderSessions() + '<button class="za-add-session" id="za-add-session">+ Add Session</button>';
-          wireEvents();
-        });
-      });
-
-      // Save
+      // Save / Update
       modal.querySelector('#za-save').addEventListener('click', async function() {
-        var toInsert = [];
-        sessions.forEach(function(session) {
-          // Save context image as first entry if provided
-          if (session.context_url) {
-            toInsert.push({
-              zone_id:      zoneId,
-              session_date: session.date,
-              text:         '__context__',
-              image_url:    session.context_url,
-            });
-          }
-          session.entries.forEach(function(entry) {
-            if (!entry.text && !entry.url) return;
-            toInsert.push({
-              zone_id:      zoneId,
-              session_date: session.date,
-              text:         entry.text || null,
-              image_url:    entry.url  || null,
-            });
-          });
+        var btn = modal.querySelector('#za-save');
+
+        // Read final values from DOM
+        var dateEl    = modal.querySelector('#za-date');
+        var contextEl = modal.querySelector('#za-context');
+        if (dateEl)    sessionDate        = dateEl.value;
+        if (contextEl) state.context_url  = contextEl.value.trim();
+
+        modal.querySelectorAll('.za-modal-entry').forEach(function(entryEl) {
+          var ei   = parseInt(entryEl.dataset.ei);
+          var text = entryEl.querySelector('.za-entry-text');
+          var url  = entryEl.querySelector('.za-entry-url');
+          if (text) state.entries[ei].text = text.value.trim();
+          if (url)  state.entries[ei].url  = url.value.trim();
         });
 
-        if (toInsert.length === 0) { alert('Please add at least one text or image.'); return; }
+        var hasContent = state.context_url || state.entries.some(function(e) { return e.text || e.url; });
+        if (!hasContent) { alert('Please add at least one entry.'); return; }
 
-        var btn = modal.querySelector('#za-save');
         btn.textContent = 'Saving...'; btn.disabled = true;
 
-        var { error } = await db.from('zone_analyses').insert(toInsert);
-        if (!error) {
+        var payload = {
+          zone_id:      zoneId,
+          session_date: sessionDate,
+          text:         JSON.stringify(state),
+          image_url:    null,
+        };
+
+        var result;
+        if (isEdit) {
+          result = await db.from('zone_analyses').update(payload).eq('id', existingRow.id);
+        } else {
+          result = await db.from('zone_analyses').insert([payload]);
+        }
+
+        if (!result.error) {
           close();
           ZoneAnalysis.loadAnalyses(zoneId);
         } else {
-          console.error(error);
-          btn.textContent = '💾 Save All'; btn.disabled = false;
-          alert('Error saving. Check console.');
+          console.error(result.error);
+          btn.textContent = isEdit ? '💾 Update' : '💾 Save';
+          btn.disabled = false;
+          alert('Error saving.');
         }
       });
     }
 
-    renderModal();
+    buildModal();
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
   },
 
-  shareSessionToDiscord(items, dateLabel) {
+  shareSessionToDiscord(content, dateLabel) {
     var lines = ['# 📋 Zone Analysis — ' + dateLabel, ''];
-    items.forEach(function(item, i) {
+    if (content.context_url) { lines.push(content.context_url); lines.push(''); }
+    (content.entries || []).forEach(function(entry, i) {
+      if (!entry.text && !entry.url) return;
       if (i > 0) lines.push('──────────────');
-      if (item.text) {
-        item.text.split('\n').forEach(function(l) {
+      if (entry.text) {
+        entry.text.split('\n').forEach(function(l) {
           l = l.trim();
           if (!l) lines.push('');
           else if (l.startsWith('-') || l.startsWith('•')) lines.push('> ' + l);
           else lines.push(l);
         });
       }
-      if (item.image_url) { lines.push(''); lines.push(item.image_url); }
+      if (entry.url) { lines.push(''); lines.push(entry.url); }
       lines.push('');
     });
     lines.push('🚗 *The Delivery Man — Zone Analysis*');
     ZoneAnalysis._openDiscordModal(lines.join('\n'));
   },
 
-  shareAllToDiscord(data) {
-    var sessions = {};
-    var order = [];
-    data.forEach(function(item) {
-      var key = item.session_date || item.created_at.slice(0,10);
-      if (!sessions[key]) { sessions[key] = []; order.push(key); }
-      // Put context items first
-      if (item.text === '__context__') sessions[key].unshift(item);
-      else sessions[key].push(item);
-    });
-
+  shareAllToDiscord(rows) {
     var lines = ['# 📋 Zone Analysis — Full Log', ''];
-    order.forEach(function(key) {
-      var dateLabel = new Date(key + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+    rows.forEach(function(row) {
+      var content = {};
+      try { content = JSON.parse(row.text || '{}'); } catch(e) {}
+      var dateLabel = row.session_date
+        ? new Date(row.session_date + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+        : '—';
       lines.push('═══════════════════════');
       lines.push('📅 **' + dateLabel + '**');
       lines.push('═══════════════════════');
-      lines.push('');
-      sessions[key].forEach(function(item, i) {
+      if (content.context_url) { lines.push(content.context_url); lines.push(''); }
+      (content.entries || []).forEach(function(entry, i) {
+        if (!entry.text && !entry.url) return;
         if (i > 0) lines.push('──────────────');
-        if (item.text) {
-          item.text.split('\n').forEach(function(l) {
+        if (entry.text) {
+          entry.text.split('\n').forEach(function(l) {
             l = l.trim();
             if (!l) lines.push('');
             else if (l.startsWith('-') || l.startsWith('•')) lines.push('> ' + l);
             else lines.push(l);
           });
         }
-        if (item.image_url) { lines.push(''); lines.push(item.image_url); }
+        if (entry.url) { lines.push(''); lines.push(entry.url); }
         lines.push('');
       });
     });
@@ -376,7 +344,6 @@ const ZoneAnalysis = {
     var modal   = document.getElementById('comment-modal');
     var overlay = document.getElementById('modal-overlay');
     var escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
     modal.innerHTML =
       '<div class="modal-header"><span class="modal-title">🔗 Share — Discord</span>' +
         '<button class="modal-close" id="zad-close">✕</button></div>' +
@@ -389,7 +356,6 @@ const ZoneAnalysis = {
         '<button class="btn btn-secondary" id="zad-close2">Close</button>' +
         '<button class="btn btn-discord" id="zad-copy">📋 Copy</button>' +
       '</div>';
-
     var close = function() { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
     modal.querySelector('#zad-close').addEventListener('click', close);
     modal.querySelector('#zad-close2').addEventListener('click', close);
