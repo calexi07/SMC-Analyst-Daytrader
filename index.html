@@ -10,7 +10,6 @@
 </head>
 <body>
   <div id="app">
-
     <header class="topbar">
       <div class="topbar-left">
         <span class="logo-text">
@@ -23,8 +22,8 @@
         <nav class="topbar-nav">
           <button class="nav-btn active" id="nav-dashboard">📊 Dashboard</button>
           <button class="nav-btn" id="nav-pairs">🗺 Zones</button>
+          <button class="nav-btn" id="nav-deliveries">🚛 All Deliveries</button>
         </nav>
-        <!-- BELL -->
         <div id="notif-bell-wrap" class="notif-bell-wrap">
           <button class="notif-bell-btn" id="notif-bell" title="Notifications">
             🔔
@@ -36,13 +35,9 @@
     </header>
 
     <main id="main-content">
-
-      <!-- DASHBOARD VIEW -->
       <div id="dashboard-view" class="view-section">
         <div class="loader" style="padding:80px;">Loading dashboard...</div>
       </div>
-
-      <!-- PAIRS / ZONES VIEW -->
       <div id="pairs-view" class="view-section hidden">
         <div class="pairs-toolbar">
           <select id="pair-select" class="pair-dropdown">
@@ -55,11 +50,10 @@
         </div>
         <div id="pair-dashboard" class="pair-dashboard hidden"></div>
       </div>
-
+      <div id="deliveries-view" class="view-section hidden"></div>
     </main>
   </div>
 
-  <!-- MODALS -->
   <div id="modal-overlay" class="modal-overlay hidden"></div>
   <div id="zone-modal"    class="modal hidden"></div>
   <div id="comment-modal" class="modal hidden"></div>
@@ -77,6 +71,7 @@
   <script src="js/live.js"></script>
   <script src="js/notifications.js"></script>
   <script src="js/dashboard.js"></script>
+  <script src="js/deliveries.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
