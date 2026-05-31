@@ -384,6 +384,11 @@ const RoadMap = {
     RoadMap._animFrame = requestAnimationFrame(RoadMap._tick);
   },
 
+  updatePrice(price) {
+    RoadMap._price   = price;
+    RoadMap._targetX = RoadMap._priceToWorldX ? RoadMap._priceToWorldX(price) : RoadMap._targetX;
+  },
+
   stop() {
     if (RoadMap._animFrame) {
       cancelAnimationFrame(RoadMap._animFrame);
