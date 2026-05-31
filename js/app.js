@@ -7,6 +7,7 @@ const App = {
   init() {
     document.getElementById('nav-dashboard').addEventListener('click', () => this.showDashboard());
     document.getElementById('nav-pairs').addEventListener('click', () => this.showPairsView());
+    document.getElementById('nav-deliveries').addEventListener('click', () => Deliveries.show());
 
     document.getElementById('notif-bell').addEventListener('click', function(e) {
       e.stopPropagation();
@@ -27,6 +28,7 @@ const App = {
   showDashboard() {
     document.getElementById('dashboard-view').classList.remove('hidden');
     document.getElementById('pairs-view').classList.add('hidden');
+    document.getElementById('deliveries-view').classList.add('hidden');
     document.getElementById('nav-dashboard').classList.add('active');
     document.getElementById('nav-pairs').classList.remove('active');
     localStorage.setItem('zt_last_view', 'dashboard');
@@ -36,6 +38,7 @@ const App = {
   showPairsView() {
     document.getElementById('pairs-view').classList.remove('hidden');
     document.getElementById('dashboard-view').classList.add('hidden');
+    document.getElementById('deliveries-view').classList.add('hidden');
     document.getElementById('nav-pairs').classList.add('active');
     document.getElementById('nav-dashboard').classList.remove('active');
     localStorage.setItem('zt_last_view', 'pairs');
