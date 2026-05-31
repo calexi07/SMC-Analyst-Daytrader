@@ -32,8 +32,12 @@ const Live = {
 
   async _fetchAll(pair) {
     var prices = await DB.getAllLivePrices(pair);
+    // Clear old prices for this pair first
+    Object.keys(Live._prices).forEach(function(k) {
+      if (k.startsWith(pair + '_')) delete Live._prices[k];
+    });
     prices.forEach(function(p) {
-      Live._prices[pair + '_' + p.tf] = p;
+      Live._prices[pair + '_' + p.tf] = Object.assign({}, p, { pair: pair });
     });
     Live._updatePriceDisplay(pair);
     // Update truck position if road map is active
@@ -51,18 +55,25 @@ const Live = {
   _updatePriceDisplay(pair) {
     var tfs = ['weekly', 'daily', 'h4', '1h', '1m'];
 
-    // Show 1m price in pair header
+    // Show 1m price in pair header — only if it matches current pair
     var p1m = Live.getPrice(pair, '1m');
+    // Verify price belongs to this pair
+    if (p1m && p1m.pair && p1m.pair !== pair) p1m = null;
     var headerEl = document.getElementById('pair-live-price');
-    if (headerEl && p1m && p1m.price) {
-      var age1m = Math.floor((Date.now() - p1m.ts) / 1000);
-      var fresh1m = age1m < 120;
-      headerEl.innerHTML =
-        '<span class="live-price-val ' + (fresh1m ? 'fresh' : 'stale') + '">' +
-          parseFloat(p1m.price).toFixed(p1m.price > 100 ? 2 : 5) +
-        '</span>' +
-        '<span class="price-age">' + Live._fmtAge(age1m) + ' · 1M</span>';
-      headerEl.style.display = 'flex';
+    if (headerEl) {
+      if (p1m && p1m.price) {
+        var age1m = Math.floor((Date.now() - p1m.ts) / 1000);
+        var fresh1m = age1m < 120;
+        headerEl.innerHTML =
+          '<span class="live-price-val ' + (fresh1m ? 'fresh' : 'stale') + '">' +
+            parseFloat(p1m.price).toFixed(p1m.price > 100 ? 2 : 5) +
+          '</span>' +
+          '<span class="price-age">' + Live._fmtAge(age1m) + ' · 1M</span>';
+        headerEl.style.display = 'flex';
+      } else {
+        headerEl.innerHTML = '<span class="live-price-val stale">No live data</span>';
+        headerEl.style.display = 'flex';
+      }
     }
 
     tfs.forEach(function(tf) {
