@@ -27,7 +27,9 @@ const ZoneAnalysis = {
     data.forEach(function(item) {
       var key = item.session_date || item.created_at.slice(0,10);
       if (!sessions[key]) { sessions[key] = []; order.push(key); }
-      sessions[key].push(item);
+      // Put context items first
+      if (item.text === '__context__') sessions[key].unshift(item);
+      else sessions[key].push(item);
     });
 
     list.innerHTML = '';
@@ -71,8 +73,30 @@ const ZoneAnalysis = {
 
   buildEntry(item, zoneId) {
     var el = document.createElement('div');
-    el.className = 'za-entry';
 
+    // Context image — special rendering
+    if (item.text === '__context__' && item.image_url) {
+      el.className = 'za-context-entry';
+      el.innerHTML =
+        '<div class="za-context-label">🖼 Context</div>' +
+        '<img class="za-context-img" src="' + item.image_url + '" loading="lazy" />' +
+        '<button class="btn-icon del za-del" title="Delete context" style="margin-top:4px;">✕ Remove context</button>';
+      el.querySelector('.za-del').addEventListener('click', async function() {
+        if (!confirm('Remove context image?')) return;
+        await db.from('zone_analyses').delete().eq('id', item.id);
+        ZoneAnalysis.loadAnalyses(zoneId);
+      });
+      el.querySelector('.za-context-img').addEventListener('click', function() {
+        var lb = document.createElement('div');
+        lb.className = 'lightbox';
+        lb.innerHTML = '<img src="' + item.image_url + '" />';
+        lb.addEventListener('click', function() { lb.remove(); });
+        document.body.appendChild(lb);
+      });
+      return el;
+    }
+
+    el.className = 'za-entry';
     var ts = new Date(item.created_at).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
 
     el.innerHTML =
@@ -106,7 +130,7 @@ const ZoneAnalysis = {
     var overlay = document.getElementById('modal-overlay');
 
     // Build initial state: 1 session with 1 entry
-    var sessions = [{ date: new Date().toISOString().slice(0,10), entries: [{ text: '', url: '' }] }];
+    var sessions = [{ date: new Date().toISOString().slice(0,10), context_url: '', entries: [{ text: '', url: '' }] }];
 
     function renderModal() {
       modal.innerHTML =
@@ -145,6 +169,11 @@ const ZoneAnalysis = {
             (sessions.length > 1 ? '<button class="btn-icon del za-remove-session" data-si="' + si + '">✕ Remove session</button>' : '') +
           '</div>' +
           '<input class="form-input za-session-date" type="date" value="' + session.date + '" data-si="' + si + '" style="margin-bottom:10px;" />' +
+          '<div class="za-context-section">' +
+            '<label class="form-label" style="margin-bottom:5px; display:block;">🖼 Context Chart (overview)</label>' +
+            '<input class="form-input za-context-url" placeholder="TradingView context URL..." value="' + (session.context_url || '') + '" data-si="' + si + '" />' +
+            (session.context_url ? '<div class="za-url-preview-wrap" style="margin-top:6px;"><img class="upload-preview" src="' + session.context_url + '" style="display:block; max-height:140px;" /></div>' : '') +
+          '</div>' +
           entries +
           '<button class="za-add-entry" data-si="' + si + '">+ Add entry</button>' +
         '</div>';
@@ -185,6 +214,23 @@ const ZoneAnalysis = {
       modal.querySelectorAll('.za-session-date').forEach(function(el) {
         var si = parseInt(el.dataset.si);
         el.addEventListener('change', function() { sessions[si].date = el.value; });
+      });
+
+      modal.querySelectorAll('.za-context-url').forEach(function(el) {
+        var si = parseInt(el.dataset.si);
+        el.addEventListener('input', function() {
+          sessions[si].context_url = el.value.trim();
+          var wrap = el.nextElementSibling;
+          if (wrap && wrap.classList.contains('za-url-preview-wrap')) {
+            wrap.querySelector('img').src = el.value.trim();
+          } else if (el.value.trim()) {
+            var preview = document.createElement('div');
+            preview.className = 'za-url-preview-wrap';
+            preview.style.marginTop = '6px';
+            preview.innerHTML = '<img class="upload-preview" src="' + el.value.trim() + '" style="display:block; max-height:140px;" />';
+            el.insertAdjacentElement('afterend', preview);
+          }
+        });
       });
 
       // Add entry
@@ -229,6 +275,15 @@ const ZoneAnalysis = {
       modal.querySelector('#za-save').addEventListener('click', async function() {
         var toInsert = [];
         sessions.forEach(function(session) {
+          // Save context image as first entry if provided
+          if (session.context_url) {
+            toInsert.push({
+              zone_id:      zoneId,
+              session_date: session.date,
+              text:         '__context__',
+              image_url:    session.context_url,
+            });
+          }
           session.entries.forEach(function(entry) {
             if (!entry.text && !entry.url) return;
             toInsert.push({
@@ -287,7 +342,9 @@ const ZoneAnalysis = {
     data.forEach(function(item) {
       var key = item.session_date || item.created_at.slice(0,10);
       if (!sessions[key]) { sessions[key] = []; order.push(key); }
-      sessions[key].push(item);
+      // Put context items first
+      if (item.text === '__context__') sessions[key].unshift(item);
+      else sessions[key].push(item);
     });
 
     var lines = ['# 📋 Zone Analysis — Full Log', ''];
