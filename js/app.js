@@ -5,22 +5,17 @@ const App = {
   currentPair: null,
 
   init() {
-    // Nav buttons
     document.getElementById('nav-dashboard').addEventListener('click', () => this.showDashboard());
     document.getElementById('nav-pairs').addEventListener('click', () => this.showPairsView());
 
-    // Bell
     document.getElementById('notif-bell').addEventListener('click', function(e) {
       e.stopPropagation();
       Notifications.togglePanel();
     });
 
-    // Init notifications
     Notifications.init();
-
     Pairs.init();
 
-    // Restore last view
     const lastView = localStorage.getItem('zt_last_view') || 'dashboard';
     if (lastView === 'pairs') {
       this.showPairsView();
@@ -45,7 +40,6 @@ const App = {
     document.getElementById('nav-dashboard').classList.remove('active');
     localStorage.setItem('zt_last_view', 'pairs');
 
-    // Restore last pair
     const lastPair = localStorage.getItem('zt_last_pair');
     if (lastPair) {
       const select = document.getElementById('pair-select');
@@ -55,6 +49,13 @@ const App = {
   },
 
   async loadPair(pair) {
+    // Stop previous pair polling + road map
+    if (this.currentPair && this.currentPair !== pair) {
+      Live.stopPolling(this.currentPair);
+      Live._prices = {};   // clear cached prices so old pair price doesn't show
+      RoadMap.stop();
+    }
+
     this.currentPair = pair;
     localStorage.setItem('zt_last_pair', pair);
     document.getElementById('empty-state').classList.add('hidden');
@@ -65,6 +66,11 @@ const App = {
   },
 
   clearPair() {
+    if (this.currentPair) {
+      Live.stopPolling(this.currentPair);
+      Live._prices = {};
+      RoadMap.stop();
+    }
     this.currentPair = null;
     localStorage.removeItem('zt_last_pair');
     document.getElementById('empty-state').classList.remove('hidden');
