@@ -384,6 +384,63 @@ const RoadMap = {
     RoadMap._animFrame = requestAnimationFrame(RoadMap._tick);
   },
 
+  _initDrag() {
+    var canvas = document.getElementById('road-canvas');
+    if (!canvas) return;
+
+    canvas.addEventListener('mousedown', function(e) {
+      RoadMap._isDragging = true;
+      RoadMap._dragStartX = e.clientX;
+      RoadMap._dragStartPan = RoadMap._panOffset;
+      canvas.style.cursor = 'grabbing';
+      var hint = document.getElementById('road-drag-hint');
+      if (hint) hint.style.display = 'none';
+    });
+    window.addEventListener('mousemove', function(e) {
+      if (!RoadMap._isDragging) return;
+      RoadMap._panOffset = RoadMap._dragStartPan + (e.clientX - RoadMap._dragStartX);
+    });
+    window.addEventListener('mouseup', function() {
+      RoadMap._isDragging = false;
+      if (canvas) canvas.style.cursor = 'grab';
+    });
+
+    canvas.addEventListener('touchstart', function(e) {
+      RoadMap._isDragging = true;
+      RoadMap._dragStartX = e.touches[0].clientX;
+      RoadMap._dragStartPan = RoadMap._panOffset;
+      var hint = document.getElementById('road-drag-hint');
+      if (hint) hint.style.display = 'none';
+    }, { passive: true });
+    canvas.addEventListener('touchmove', function(e) {
+      if (!RoadMap._isDragging) return;
+      RoadMap._panOffset = RoadMap._dragStartPan + (e.touches[0].clientX - RoadMap._dragStartX);
+    }, { passive: true });
+    canvas.addEventListener('touchend', function() {
+      RoadMap._isDragging = false;
+    });
+
+    canvas.style.cursor = 'grab';
+  },
+
+  async _screenshot() {
+    var canvas = document.getElementById('road-canvas');
+    if (!canvas) return;
+    var btn = document.getElementById('road-screenshot-btn');
+    canvas.toBlob(async function(blob) {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        if (btn) { btn.textContent = '✅'; btn.style.background = '#059669'; setTimeout(function() { btn.textContent = '📸'; btn.style.background = ''; }, 2000); }
+      } catch(e) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'zone-map-' + Date.now() + '.png'; a.click();
+        URL.revokeObjectURL(url);
+        if (btn) { btn.textContent = '💾'; setTimeout(function() { btn.textContent = '📸'; }, 2000); }
+      }
+    }, 'image/png');
+  },
+
   updatePrice(price) {
     RoadMap._price   = price;
     RoadMap._targetX = RoadMap._priceToWorldX ? RoadMap._priceToWorldX(price) : RoadMap._targetX;
