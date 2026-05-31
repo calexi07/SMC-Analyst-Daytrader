@@ -44,7 +44,10 @@ const Zones = {
             <span class="tf-label ${tf.cssClass}">${tf.label}</span>
             <span class="tf-count" id="count-${tf.key}">loading...</span>
           </div>
-          <span class="tf-chevron">▼</span>
+          <div class="tf-header-right">
+            <button class="btn-discord-tf btn-sm" id="discord-${tf.key}" title="Share zones to Discord" style="font-size:11px; padding:3px 8px;">🔗 Discord</button>
+            <span class="tf-chevron">▼</span>
+          </div>
         </div>
         <div class="tf-body">
           <div class="filter-bar" id="filter-${tf.key}">
@@ -70,6 +73,11 @@ const Zones = {
       section.querySelector('.btn-add-zone').addEventListener('click', (e) => {
         e.stopPropagation();
         Zones.openAddModal(pair, tf.key);
+      });
+
+      section.querySelector(`#discord-${tf.key}`).addEventListener('click', (e) => {
+        e.stopPropagation();
+        Zones.openDiscordZonesModal(pair, tf.key, tf.label);
       });
 
       section.querySelectorAll('.filter-btn').forEach(btn => {
@@ -330,7 +338,7 @@ const Zones = {
       modal.querySelector('#tests-group').style.display = e.target.value === 'tested' ? 'flex' : 'none';
     });
 
-    const close = () => { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
+    var close = function() { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
     modal.querySelector('#zone-modal-close').addEventListener('click', close);
     modal.querySelector('#zone-modal-cancel').addEventListener('click', close);
     overlay.addEventListener('click', close, { once: true });
@@ -450,7 +458,7 @@ const Zones = {
       modal.querySelector('#tests-group').style.display = e.target.value === 'tested' ? 'flex' : 'none';
     });
 
-    const close = () => { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
+    var close = function() { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
     modal.querySelector('#zone-modal-close').addEventListener('click', close);
     modal.querySelector('#zone-modal-cancel').addEventListener('click', close);
     overlay.addEventListener('click', close, { once: true });
@@ -479,6 +487,112 @@ const Zones = {
       });
       if (updated) { close(); await this.loadZones(zone.pair, zone.timeframe); }
       else { btn.textContent = 'Save Changes'; btn.disabled = false; }
+    });
+
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+  },
+
+  openDiscordZonesModal(pair, timeframe, tfLabel) {
+    const modal   = document.getElementById('comment-modal');
+    const overlay = document.getElementById('modal-overlay');
+
+    var el = document.getElementById('zones-' + timeframe);
+    var zones = el && el.dataset.cache ? JSON.parse(el.dataset.cache) : [];
+
+    if (zones.length === 0) {
+      alert('No zones to share for this timeframe.');
+      return;
+    }
+
+    var decimals = (zones[0] && zones[0].price_top > 100) ? 2 : 5;
+    var now = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+
+    // Build Discord message
+    var lines = [];
+    lines.push('# 🚗 The Delivery Man — Zone Report');
+    lines.push('## ' + pair + ' · ' + tfLabel + ' Zones');
+    lines.push('📅 ' + now);
+    lines.push('');
+    lines.push('> *Every zone is a city. Every trade is a delivery.*');
+    lines.push('');
+    lines.push('═══════════════════════════════');
+    lines.push('');
+
+    var fresh  = zones.filter(function(z) { return z.status === 'fresh'; });
+    var tested = zones.filter(function(z) { return z.status === 'tested'; });
+    var broken = zones.filter(function(z) { return z.status === 'broken'; });
+
+    function formatZones(list, emoji, label) {
+      if (list.length === 0) return;
+      lines.push(emoji + ' **' + label + '**');
+      lines.push('');
+      list.forEach(function(z) {
+        const dir  = z.direction === 'bull' ? '▲ Bullish' : z.direction === 'bear' ? '▼ Bearish' : '';
+        const top  = zSafeFloat(z.price_top);
+        const btm  = zSafeFloat(z.price_btm);
+        const date = z.zone_date ? new Date(z.zone_date + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' }) : '—';
+        const tests = z.status === 'tested' && z.test_count ? ' (×' + z.test_count + ')' : '';
+
+        lines.push('📍 **' + z.name + '**' + tests + ' — ' + dir);
+        if (top || btm) {
+          const topStr = top ? top.toFixed(decimals) : '—';
+          const btmStr = btm ? btm.toFixed(decimals) : '—';
+          lines.push('   `T: ' + topStr + '  ·  B: ' + btmStr + '`');
+        }
+        lines.push('   🗓 Formed: ' + date);
+        lines.push('');
+      });
+    }
+
+    formatZones(fresh,  '🟢', 'Fresh Zones');
+    formatZones(tested, '🟡', 'Tested Zones');
+    formatZones(broken, '🔴', 'Broken Zones');
+
+    lines.push('═══════════════════════════════');
+    lines.push('🚗 *The Delivery Man — SMC Analyst · ' + pair + ' ' + tfLabel + '*');
+
+    var discordText = lines.join('\n');
+    var escaped = discordText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    modal.innerHTML =
+      '<div class="modal-header">' +
+        '<span class="modal-title">🔗 Share ' + tfLabel + ' Zones — Discord</span>' +
+        '<button class="modal-close" id="dz-close">✕</button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div class="discord-preview-label">' +
+          '<span class="form-label">Discord Format — Ready to Copy</span>' +
+          '<span class="discord-hint">' + zones.length + ' zones · ' + fresh.length + ' fresh · ' + tested.length + ' tested · ' + broken.length + ' broken</span>' +
+        '</div>' +
+        '<div class="discord-preview">' + escaped + '</div>' +
+        '<div class="discord-char-count">' + discordText.length + ' / 2000 chars</div>' +
+      '</div>' +
+      '<div class="modal-footer">' +
+        '<button class="btn btn-secondary" id="dz-close2">Close</button>' +
+        '<button class="btn btn-discord" id="dz-copy">📋 Copy to Clipboard</button>' +
+      '</div>';
+
+    var close = function() { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
+    modal.querySelector('#dz-close').addEventListener('click', close);
+    modal.querySelector('#dz-close2').addEventListener('click', close);
+    overlay.addEventListener('click', close, { once: true });
+
+    modal.querySelector('#dz-copy').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(discordText);
+      } catch(e) {
+        const ta = document.createElement('textarea');
+        ta.value = discordText;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      }
+      const btn = modal.querySelector('#dz-copy');
+      btn.textContent = '✅ Copied!';
+      btn.style.background = '#059669';
+      setTimeout(() => { btn.textContent = '📋 Copy to Clipboard'; btn.style.background = ''; }, 2000);
     });
 
     overlay.classList.remove('hidden');
