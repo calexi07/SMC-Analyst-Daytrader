@@ -2,13 +2,17 @@
 
 const RoadMap = {
 
-  _priceHistory: [],   // {price, ts} last 15min
-  _direction: 1,       // 1 = right (bullish), -1 = left (bearish)
-  _dashOffset: 0,      // animated dash position
-  _panOffset: 0,       // horizontal pan offset from drag
+  _priceHistory: [],
+  _direction: 1,
+  _dashOffset: 0,
+  _panOffset: 0,
   _isDragging: false,
   _dragStartX: 0,
   _dragStartPan: 0,
+  _zoom: 1.0,          // 0.5 = zoomed out, 2.0 = zoomed in
+  _filterTF: 'all',
+  _filterDir: 'all',
+  _filterStatus: 'all',
 
   _animFrame: null,
   _truckX: 0,
@@ -86,6 +90,32 @@ const RoadMap = {
     RoadMap._priceToWorldX = priceToWorldX;
 
     mapEl.innerHTML =
+      '<div class="road-controls">' +
+        '<div class="road-filters">' +
+          '<select class="road-filter-select" id="rm-filter-tf">' +
+            '<option value="all">All TFs</option>' +
+            '<option value="weekly">Weekly</option>' +
+            '<option value="daily">Daily</option>' +
+            '<option value="h4">4H</option>' +
+          '</select>' +
+          '<select class="road-filter-select" id="rm-filter-dir">' +
+            '<option value="all">All Directions</option>' +
+            '<option value="bull">▲ Bull</option>' +
+            '<option value="bear">▼ Bear</option>' +
+          '</select>' +
+          '<select class="road-filter-select" id="rm-filter-status">' +
+            '<option value="all">All Status</option>' +
+            '<option value="fresh">Fresh</option>' +
+            '<option value="tested">Tested</option>' +
+            '<option value="broken">Broken</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="road-zoom-controls">' +
+          '<button class="road-zoom-btn" id="rm-zoom-out" title="Zoom out">−</button>' +
+          '<span class="road-zoom-label" id="rm-zoom-label">100%</span>' +
+          '<button class="road-zoom-btn" id="rm-zoom-in" title="Zoom in">+</button>' +
+        '</div>' +
+      '</div>' +
       '<div class="road-wrap">' +
         '<canvas id="road-canvas" width="' + W + '" height="' + H + '" style="cursor:grab;"></canvas>' +
         '<div class="road-price-pill" id="road-price-pill">' +
@@ -100,10 +130,42 @@ const RoadMap = {
     setTimeout(function() {
       var screenshotBtn = document.getElementById('road-screenshot-btn');
       if (screenshotBtn) screenshotBtn.addEventListener('click', function() { RoadMap._screenshot(); });
+
       var resetBtn = document.getElementById('road-reset-btn');
       if (resetBtn) resetBtn.addEventListener('click', function() {
-        RoadMap._panOffset = RoadMap._W / 2 - RoadMap._targetX;
+        RoadMap._panOffset = RoadMap._W / 2 - RoadMap._targetX * RoadMap._zoom;
+        RoadMap._zoom = 1.0;
+        document.getElementById('rm-zoom-label').textContent = '100%';
       });
+
+      // Filters
+      ['tf','dir','status'].forEach(function(key) {
+        var el = document.getElementById('rm-filter-' + key);
+        if (!el) return;
+        // Restore saved filter
+        if (key === 'tf')     el.value = RoadMap._filterTF;
+        if (key === 'dir')    el.value = RoadMap._filterDir;
+        if (key === 'status') el.value = RoadMap._filterStatus;
+        el.addEventListener('change', function() {
+          if (key === 'tf')     RoadMap._filterTF     = el.value;
+          if (key === 'dir')    RoadMap._filterDir    = el.value;
+          if (key === 'status') RoadMap._filterStatus = el.value;
+        });
+      });
+
+      // Zoom
+      var zoomIn  = document.getElementById('rm-zoom-in');
+      var zoomOut = document.getElementById('rm-zoom-out');
+      var zoomLbl = document.getElementById('rm-zoom-label');
+      if (zoomIn) zoomIn.addEventListener('click', function() {
+        RoadMap._zoom = Math.min(3.0, parseFloat((RoadMap._zoom + 0.25).toFixed(2)));
+        if (zoomLbl) zoomLbl.textContent = Math.round(RoadMap._zoom * 100) + '%';
+      });
+      if (zoomOut) zoomOut.addEventListener('click', function() {
+        RoadMap._zoom = Math.max(0.3, parseFloat((RoadMap._zoom - 0.25).toFixed(2)));
+        if (zoomLbl) zoomLbl.textContent = Math.round(RoadMap._zoom * 100) + '%';
+      });
+
       RoadMap._initDrag();
     }, 100);
 
@@ -123,7 +185,7 @@ const RoadMap = {
     var roadY   = RoadMap._roadY;
     // Clamp pan so world always fills viewport (infinite feel)
     var maxPan = 0;
-    var minPan = -(WORLD_W - W);
+    var minPan = -(WORLD_W * RoadMap._zoom - W);
     if (RoadMap._panOffset > maxPan) RoadMap._panOffset = maxPan;
     if (RoadMap._panOffset < minPan) RoadMap._panOffset = minPan;
     var pan = RoadMap._panOffset;
@@ -181,26 +243,33 @@ const RoadMap = {
     roadGrad.addColorStop(0, '#374151');
     roadGrad.addColorStop(1, '#1f2937');
     ctx.fillStyle = roadGrad;
-    ctx.fillRect(0, roadTop, WORLD_W, roadH);
+    ctx.fillRect(0, roadTop, WORLD_W * RoadMap._zoom, roadH);
 
     // Road edges
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(0, roadTop + 3); ctx.lineTo(WORLD_W, roadTop + 3); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, roadTop + roadH - 3); ctx.lineTo(WORLD_W, roadTop + roadH - 3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, roadTop + 3); ctx.lineTo(WORLD_W * RoadMap._zoom, roadTop + 3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, roadTop + roadH - 3); ctx.lineTo(WORLD_W * RoadMap._zoom, roadTop + roadH - 3); ctx.stroke();
 
     // Center dashes
     ctx.strokeStyle = 'rgba(255,255,255,0.55)';
     ctx.lineWidth = 2;
     ctx.setLineDash([22, 18]);
     ctx.lineDashOffset = RoadMap._dashOffset;
-    ctx.beginPath(); ctx.moveTo(0, roadY); ctx.lineTo(WORLD_W, roadY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, roadY); ctx.lineTo(WORLD_W * RoadMap._zoom, roadY); ctx.stroke();
     ctx.setLineDash([]);
 
-    // Zone bands + signs
-    RoadMap._zones.forEach(function(item, i) {
+    // Zone bands + signs — apply filter
+    var visibleZones = RoadMap._zones.filter(function(item) {
       var z = item.zone;
-      var wx = RoadMap._priceToWorldX(item.mid);
+      if (RoadMap._filterTF     !== 'all' && item.tf            !== RoadMap._filterTF)     return false;
+      if (RoadMap._filterDir    !== 'all' && z.direction        !== RoadMap._filterDir)    return false;
+      if (RoadMap._filterStatus !== 'all' && z.status           !== RoadMap._filterStatus) return false;
+      return true;
+    });
+    visibleZones.forEach(function(item, i) {
+      var z = item.zone;
+      var wx = RoadMap._priceToWorldX(item.mid) * RoadMap._zoom;
       var isBull   = z.direction === 'bull';
       var isInside = item.inside;
       var zColor   = isInside ? '#f59e0b' : isBull ? '#10b981' : '#ef4444';
@@ -288,7 +357,7 @@ const RoadMap = {
 
     // ── TRUCK (fixed in viewport, world moves under it) ──
     // Truck screen X = world X + pan
-    var tx = RoadMap._truckX + pan;
+    var tx = RoadMap._truckX * RoadMap._zoom + pan;
     var ty = roadY - 10;
 
     ctx.save();
@@ -462,5 +531,9 @@ const RoadMap = {
     RoadMap._dashOffset = 0;
     RoadMap._panOffset = 0;
     RoadMap._isDragging = false;
+    RoadMap._zoom = 1.0;
+    RoadMap._filterTF = 'all';
+    RoadMap._filterDir = 'all';
+    RoadMap._filterStatus = 'all';
   }
 };
