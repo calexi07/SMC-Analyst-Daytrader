@@ -2191,3 +2191,107 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
   color: var(--accent2) !important;
   background: rgba(8,145,178,0.05) !important;
 }
+
+/* ── ZONE ANALYSIS MODAL ── */
+.za-modal-session {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 4px;
+}
+.za-modal-session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.za-modal-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+}
+.za-entry-actions { display: flex; justify-content: flex-end; }
+.za-entry-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+.za-session-divider {
+  height: 8px;
+}
+.za-add-entry {
+  margin-top: 10px;
+  padding: 6px 14px;
+  background: transparent;
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius);
+  color: var(--accent2);
+  font-family: var(--font);
+  font-size: 12px;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.15s;
+}
+.za-add-entry:hover { border-color: var(--accent2); background: rgba(8,145,178,0.05); }
+.za-add-session {
+  margin-top: 12px;
+  padding: 8px;
+  background: transparent;
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.15s;
+  display: block;
+}
+.za-add-session:hover { border-color: var(--accent); background: rgba(26,86,219,0.04); }
+.za-url-preview-wrap { width: 100%; }
+
+/* ── ZONE ANALYSIS LIST ── */
+.za-session {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.za-session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.za-session-date {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  letter-spacing: 0.05em;
+}
+.za-session-discord { color: #5865F2 !important; font-size: 14px; }
+.za-session-entries { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.za-entry {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 10px;
+}
+.za-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.za-entry-time {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted2);
+}
