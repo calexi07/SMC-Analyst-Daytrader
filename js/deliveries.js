@@ -79,8 +79,10 @@ const Deliveries = {
     const be     = this._filtered.filter(r => r.outcome === 'refused').length;
     const pending = this._filtered.filter(r => r.outcome === 'pending').length;
     const totalPnl = this._filtered.reduce((acc, r) => {
-      if (r.outcome === 'reached' && r.pnl) return acc + parseFloat(r.pnl);
-      if (r.outcome === 'failed'  && r.pnl) return acc - parseFloat(r.pnl);
+      if (!r.pnl) return acc;
+      const amount = Math.abs(parseFloat(r.pnl)); // always use absolute value
+      if (r.outcome === 'reached') return acc + amount;
+      if (r.outcome === 'failed')  return acc - amount;
       return acc;
     }, 0);
     const wr = (wins + losses + be) > 0 ? ((wins / (wins + losses + be)) * 100).toFixed(1) : '—';
