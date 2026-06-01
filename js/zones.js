@@ -135,7 +135,9 @@ const Zones = {
   },
 
   _renderZoneList(list, zones, filter) {
-    const filtered = filter === 'all' ? zones : zones.filter(z => z.status === filter);
+    const filtered = filter === 'all'
+      ? zones.filter(z => z.status !== 'broken')
+      : zones.filter(z => z.status === filter);
     if (filtered.length === 0) {
       list.innerHTML = `<div class="loader" style="padding:14px 0; font-size:11px;">No ${filter === 'all' ? '' : filter + ' '}zones</div>`;
       return;
