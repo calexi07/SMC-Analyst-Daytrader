@@ -2330,3 +2330,59 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
   cursor: zoom-in;
   display: block;
 }
+
+/* ── DASHBOARD BOTTOM ROW ── */
+.dash-bottom-row {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.balance-card {
+  border-top: 3px solid #7c3aed !important;
+}
+.balance-card .dash-card-value.green { color: var(--fresh); }
+.balance-card .dash-card-value.red   { color: var(--danger); }
+
+.dash-pnl-chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow);
+}
+.dash-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.dash-chart-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+.dash-chart-sub {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+#pnl-chart {
+  width: 100%;
+  display: block;
+  border-radius: 6px;
+}
+.dash-chart-empty {
+  text-align: center;
+  padding: 32px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted2);
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 640px) {
+  .dash-bottom-row { grid-template-columns: 1fr; }
+}
