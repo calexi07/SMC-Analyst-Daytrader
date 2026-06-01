@@ -197,11 +197,24 @@ const Dashboard = {
 
       document.body.appendChild(wrapper);
 
+      // Copy pnl-chart canvas content into clone before capture
+      const originalCanvas = document.getElementById('pnl-chart');
+
       const canvas = await window.html2canvas(wrapper, {
         backgroundColor: '#f4f6f9',
         scale: 2,
         useCORS: true,
         logging: false,
+        onclone: (clonedDoc) => {
+          if (!originalCanvas) return;
+          const clonedCanvas = clonedDoc.getElementById('pnl-chart');
+          if (clonedCanvas) {
+            clonedCanvas.width  = originalCanvas.width;
+            clonedCanvas.height = originalCanvas.height;
+            const ctx = clonedCanvas.getContext('2d');
+            ctx.drawImage(originalCanvas, 0, 0);
+          }
+        }
       });
 
       document.body.removeChild(wrapper);
