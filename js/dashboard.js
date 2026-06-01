@@ -17,8 +17,8 @@ const Dashboard = {
       let data = {};
       try { data = JSON.parse(c.text || '{}'); } catch(e) {}
       if (!data.outcome) return;
-      if (data.outcome === 'reached') { wins++;   totalProfit += parseFloat(data.pnl_amount || 0); }
-      if (data.outcome === 'failed')  { losses++; totalLoss   += parseFloat(data.pnl_amount || 0); }
+      if (data.outcome === 'reached') { wins++;   totalProfit += Math.abs(parseFloat(data.pnl_amount || 0)); }
+      if (data.outcome === 'failed')  { losses++; totalLoss   += Math.abs(parseFloat(data.pnl_amount || 0)); }
       if (data.outcome === 'refused') { be++; }
       if (data.outcome === 'pending') { pending++; }
     });
