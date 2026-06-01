@@ -2386,3 +2386,25 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
 @media (max-width: 640px) {
   .dash-bottom-row { grid-template-columns: 1fr; }
 }
+
+/* ── DELIVERIES COMPACT TABLE ── */
+.del-table-compact { font-size: 11px; }
+.del-table-compact th {
+  padding: 8px 8px;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+.del-table-compact td {
+  padding: 7px 8px;
+  white-space: nowrap;
+}
+.del-table-compact .del-mono { font-size: 10px; }
+.del-table-compact .del-pair { font-size: 10px; }
+.del-table-wrap { overflow-x: auto; }
+
+/* ── DATE RANGE FILTER ── */
+.del-date-range {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
