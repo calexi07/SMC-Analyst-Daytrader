@@ -50,6 +50,9 @@ const Dashboard = {
         <div class="dash-hero-title">The Delivery Man</div>
         <div class="dash-hero-sub">Cristian</div>
         <div class="dash-hero-tagline">Every zone is a city. Every trade is a delivery.</div>
+        <div class="dash-share-row">
+          <button class="btn btn-discord" id="dash-share-btn" style="margin-top:12px; font-size:13px;">📸 Share Dashboard</button>
+        </div>
         <div class="dash-hero-stats-bar">
           <div class="hero-stat"><span class="hero-stat-val" id="hs-trades">${totalTrades}</span><span class="hero-stat-lbl">Deliveries</span></div>
           <div class="hero-stat-div">·</div>
@@ -148,8 +151,88 @@ const Dashboard = {
       App.showPairsView();
     });
 
+    // Share dashboard screenshot
+    document.getElementById('dash-share-btn')?.addEventListener('click', () => {
+      Dashboard._shareScreenshot();
+    });
+
     // Render P&L chart
     Dashboard._renderPnlChart(pnlCurve, wealth);
+  },
+
+  async _shareScreenshot() {
+    const btn = document.getElementById('dash-share-btn');
+    if (!btn) return;
+    btn.textContent = '⏳ Capturing...'; btn.disabled = true;
+
+    try {
+      // Load html2canvas dynamically
+      if (!window.html2canvas) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          s.onload = resolve; s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+
+      const hero    = document.querySelector('.dash-hero');
+      const grid    = document.querySelector('.dash-grid');
+      const bottom  = document.querySelector('.dash-bottom-row');
+
+      // Create a wrapper to capture
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:fixed; top:-9999px; left:-9999px; background:#f4f6f9; padding:24px; width:900px; font-family:DM Sans,sans-serif;';
+
+      // Clone relevant sections
+      if (hero)   wrapper.appendChild(hero.cloneNode(true));
+      if (grid)   wrapper.appendChild(grid.cloneNode(true));
+      if (bottom) wrapper.appendChild(bottom.cloneNode(true));
+
+      // Remove share button from clone
+      wrapper.querySelectorAll('#dash-share-btn, .dash-share-row').forEach(e => e.remove());
+      wrapper.querySelectorAll('#wealth-edit-btn').forEach(e => e.remove());
+      wrapper.querySelectorAll('#dash-go-pairs').forEach(e => e.remove());
+      wrapper.querySelectorAll('.dash-cta').forEach(e => e.remove());
+
+      document.body.appendChild(wrapper);
+
+      const canvas = await window.html2canvas(wrapper, {
+        backgroundColor: '#f4f6f9',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      document.body.removeChild(wrapper);
+
+      // Try clipboard first
+      canvas.toBlob(async (blob) => {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          btn.textContent = '✅ Copied! Paste in Discord';
+          btn.style.background = '#059669';
+        } catch(e) {
+          // Fallback: download
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'dashboard-' + Date.now() + '.png'; a.click();
+          URL.revokeObjectURL(url);
+          btn.textContent = '💾 Saved as image';
+          btn.style.background = '#059669';
+        }
+        setTimeout(() => {
+          btn.textContent = '📸 Share Dashboard';
+          btn.style.background = '';
+          btn.disabled = false;
+        }, 3000);
+      }, 'image/png');
+
+    } catch(e) {
+      console.error('Screenshot error:', e);
+      btn.textContent = '❌ Error'; btn.disabled = false;
+      setTimeout(() => { btn.textContent = '📸 Share Dashboard'; }, 2000);
+    }
   },
 
   _renderPnlChart(curve, wealth) {
