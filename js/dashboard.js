@@ -166,7 +166,6 @@ const Dashboard = {
     btn.textContent = '⏳ Capturing...'; btn.disabled = true;
 
     try {
-      // Load html2canvas dynamically
       if (!window.html2canvas) {
         await new Promise((resolve, reject) => {
           const s = document.createElement('script');
@@ -176,31 +175,15 @@ const Dashboard = {
         });
       }
 
-      const hero    = document.querySelector('.dash-hero');
-      const grid    = document.querySelector('.dash-grid');
-      const bottom  = document.querySelector('.dash-bottom-row');
-
-      // Create a wrapper to capture
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'position:fixed; top:-9999px; left:-9999px; background:#f4f6f9; padding:24px; width:900px; font-family:DM Sans,sans-serif;';
-
-      // Clone relevant sections
-      if (hero)   wrapper.appendChild(hero.cloneNode(true));
-      if (grid)   wrapper.appendChild(grid.cloneNode(true));
-      if (bottom) wrapper.appendChild(bottom.cloneNode(true));
-
-      // Remove share button from clone
-      wrapper.querySelectorAll('#dash-share-btn, .dash-share-row').forEach(e => e.remove());
-      wrapper.querySelectorAll('#wealth-edit-btn').forEach(e => e.remove());
-      wrapper.querySelectorAll('#dash-go-pairs').forEach(e => e.remove());
-      wrapper.querySelectorAll('.dash-cta').forEach(e => e.remove());
-
-      document.body.appendChild(wrapper);
-
-      // Copy pnl-chart canvas content into clone before capture
+      // Capture the actual dashboard-view element directly
+      const el = document.getElementById('dashboard-view');
       const originalCanvas = document.getElementById('pnl-chart');
 
-      const canvas = await window.html2canvas(wrapper, {
+      // Temporarily hide share/edit buttons
+      const hideEls = el.querySelectorAll('#dash-share-btn, .dash-share-row, #wealth-edit-btn, #dash-go-pairs, .dash-cta');
+      hideEls.forEach(e => { e._wasHidden = e.style.display; e.style.display = 'none'; });
+
+      const canvas = await window.html2canvas(el, {
         backgroundColor: '#f4f6f9',
         scale: 2,
         useCORS: true,
@@ -213,20 +196,22 @@ const Dashboard = {
             clonedCanvas.height = originalCanvas.height;
             const ctx = clonedCanvas.getContext('2d');
             ctx.drawImage(originalCanvas, 0, 0);
+            // Also set explicit size so html2canvas renders it
+            clonedCanvas.style.width  = originalCanvas.offsetWidth  + 'px';
+            clonedCanvas.style.height = originalCanvas.offsetHeight + 'px';
           }
         }
       });
 
-      document.body.removeChild(wrapper);
+      // Restore hidden elements
+      hideEls.forEach(e => { e.style.display = e._wasHidden || ''; });
 
-      // Try clipboard first
       canvas.toBlob(async (blob) => {
         try {
           await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
           btn.textContent = '✅ Copied! Paste in Discord';
           btn.style.background = '#059669';
         } catch(e) {
-          // Fallback: download
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url; a.download = 'dashboard-' + Date.now() + '.png'; a.click();
