@@ -131,6 +131,7 @@ const Deliveries = {
         <td><span class="setup-outcome ${oc.cls}" style="font-size:10px; padding:2px 7px;">${oc.label} ${oc.full}</span></td>
         <td>${pnlHtml}</td>
         <td>${imgHtml}</td>
+        <td><button class="btn-icon del-edit-btn" data-id="${r.id}" title="Edit">✎</button></td>
       </tr>`;
     }).join('');
 
@@ -194,7 +195,7 @@ const Deliveries = {
               <th>Date</th><th>🚐 Van</th><th>Pair</th><th>TF</th><th>City</th>
               <th>Station</th><th>Entry</th><th>SL</th><th>TP</th><th>Lot</th>
               <th>Dist</th><th>Gas</th><th>R:R</th>
-              <th>Outcome</th><th>P&L</th><th>📷</th>
+              <th>Outcome</th><th>P&L</th><th>📷</th><th></th>
             </tr>
           </thead>
           <tbody>${rows || '<tr><td colspan="15" class="del-empty">No deliveries yet</td></tr>'}</tbody>
@@ -232,6 +233,19 @@ const Deliveries = {
     document.getElementById('del-date-clear')?.addEventListener('click', () => {
       this._filters.dateFrom = ''; this._filters.dateTo = '';
       this._applyFilters(); this._render();
+    });
+
+    // Edit buttons
+    document.querySelectorAll('.del-edit-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        // Fetch the comment
+        const { data: row } = await db.from('zone_comments').select('*, zones(name,pair,timeframe,direction)').eq('id', id).single();
+        if (!row) return;
+        let setup = {};
+        try { setup = JSON.parse(row.text || '{}'); } catch(e) {}
+        Setups.openEditOutcomeModal(row, setup, row.zone_id);
+      });
     });
 
     // Export CSV
