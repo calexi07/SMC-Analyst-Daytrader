@@ -46,7 +46,7 @@ const Dashboard = {
 
     el.innerHTML = `
       <div class="dash-hero">
-        <div class="dash-hero-eyebrow">🚗 The5%ers · SMC Analyst</div>
+        <div class="dash-hero-eyebrow">🚗 The5%ers · SMC Analyst <span id="fleet-summary" style="margin-left:8px; opacity:0.7;"></span></div>
         <div class="dash-hero-title">The Delivery Man</div>
         <div class="dash-hero-sub">Cristian</div>
         <div class="dash-hero-tagline">Every zone is a city. Every trade is a delivery.</div>
@@ -146,6 +146,16 @@ const Dashboard = {
       }
     });
 
+    // Fleet summary
+    (async function() {
+      const vans = await Vans.load();
+      const totalBalance = vans.reduce((a, v) => a + parseFloat(v.balance || 0), 0);
+      const el = document.getElementById('fleet-summary');
+      if (el && vans.length > 0) {
+        el.textContent = '· ' + vans.length + ' van' + (vans.length>1?'s':'') + ' · Fleet $' + totalBalance.toLocaleString('en',{minimumFractionDigits:2});
+      }
+    })();
+
     // Go to pairs
     document.getElementById('dash-go-pairs').addEventListener('click', () => {
       App.showPairsView();
@@ -233,8 +243,8 @@ const Dashboard = {
     }
   },
 
-  _renderPnlChart(curve, wealth) {
-    const canvas = document.getElementById('pnl-chart');
+  _renderPnlChart(curve, wealth, canvasId) {
+    const canvas = document.getElementById(canvasId || 'pnl-chart');
     if (!canvas || curve.length === 0) return;
     const ctx = canvas.getContext('2d');
     const W = canvas.offsetWidth || canvas.parentElement.offsetWidth - 40 || 400;
