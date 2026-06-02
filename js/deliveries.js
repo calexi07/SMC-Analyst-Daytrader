@@ -4,7 +4,7 @@ const Deliveries = {
 
   _allData: [],
   _filtered: [],
-  _filters: { pair: 'all', outcome: 'all', direction: 'all', tf: 'all', dateFrom: '', dateTo: '' },
+  _filters: { pair: 'all', outcome: 'all', direction: 'all', tf: 'all', dateFrom: '', dateTo: '', van: 'all' },
 
   async show() {
     document.getElementById('deliveries-view').classList.remove('hidden');
@@ -50,6 +50,7 @@ const Deliveries = {
         outcome:    setup.outcome    || 'pending',
         pnl:        setup.pnl_amount || null,
         notes:      setup.notes      || '',
+        van_plate:  setup.van_plate   || '—',
       };
     }).filter(r => r.entry !== '—' || r.station !== '—');
 
@@ -64,6 +65,7 @@ const Deliveries = {
       if (f.outcome   !== 'all' && r.outcome   !== f.outcome)   return false;
       if (f.direction !== 'all' && r.direction !== f.direction)  return false;
       if (f.tf        !== 'all' && r.timeframe !== f.tf)         return false;
+      if (f.van       !== 'all' && r.van_plate   !== f.van)        return false;
       if (f.dateFrom  && r.date_only < f.dateFrom)               return false;
       if (f.dateTo    && r.date_only > f.dateTo)                 return false;
       return true;
@@ -114,6 +116,7 @@ const Deliveries = {
 
       return `<tr class="del-row">
         <td>${date}</td>
+        <td class="del-mono" style="font-size:10px;">${r.van_plate !== '—' ? r.van_plate : '<span style="color:var(--muted2)">—</span>'}</td>
         <td><span class="del-pair">${r.pair}</span></td>
         <td><span class="del-tf">${(r.timeframe||'').toUpperCase()}</span></td>
         <td>${dirIcon} <span style="font-weight:500;">${r.zone_name}</span></td>
@@ -156,6 +159,10 @@ const Deliveries = {
         <div class="del-filters">
           <select class="form-select del-filter" id="del-filter-pair">${pairOpts}</select>
           <select class="form-select del-filter" id="del-filter-tf">${tfOpts}</select>
+          <select class="form-select del-filter" id="del-filter-van">
+            <option value="all">All Vans</option>
+            ${Vans.getAll().map(v => `<option value="${v.plate}" ${Deliveries._filters.van===v.plate?'selected':''}>${v.plate}</option>`).join('')}
+          </select>
           <select class="form-select del-filter" id="del-filter-dir">
             <option value="all">All Directions</option>
             <option value="bull" ${this._filters.direction==='bull'?'selected':''}>▲ Bull</option>
@@ -184,7 +191,7 @@ const Deliveries = {
         <table class="del-table del-table-compact">
           <thead>
             <tr>
-              <th>Date</th><th>Pair</th><th>TF</th><th>City</th>
+              <th>Date</th><th>🚐 Van</th><th>Pair</th><th>TF</th><th>City</th>
               <th>Station</th><th>Entry</th><th>SL</th><th>TP</th><th>Lot</th>
               <th>Dist</th><th>Gas</th><th>R:R</th>
               <th>Outcome</th><th>P&L</th><th>📷</th>
@@ -196,6 +203,11 @@ const Deliveries = {
     `;
 
     // Filters
+    document.getElementById('del-filter-van')?.addEventListener('change', e => {
+      this._filters.van = e.target.value;
+      this._applyFilters(); this._render();
+    });
+
     ['pair','tf','dir','outcome'].forEach(key => {
       const el = document.getElementById('del-filter-' + key);
       if (!el) return;
