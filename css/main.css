@@ -2522,3 +2522,16 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
 @media (max-width: 640px) {
   .vans-grid { grid-template-columns: 1fr; }
 }
+
+/* ── VAN CARD BALANCES ── */
+.van-balances {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.van-balance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
