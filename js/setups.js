@@ -88,12 +88,9 @@ const Setups = {
     });
 
     // Edit outcome (only for pending)
-    const editBtnEl = el.querySelector('.setup-edit');
-    if (editBtnEl) {
-      editBtnEl.addEventListener('click', () => {
-        Setups.openEditOutcomeModal(setup, data, zoneId);
-      });
-    }
+    el.querySelector('.setup-edit')?.addEventListener('click', () => {
+      Setups.openEditOutcomeModal(setup, data, zoneId);
+    });
 
     return el;
   },
@@ -103,14 +100,17 @@ const Setups = {
     const modal   = document.getElementById('comment-modal');
     const overlay = document.getElementById('modal-overlay');
 
+    const vanOptions = Vans.getAll().map(v =>
+      `<option value="${v.id}" data-plate="${v.plate}" ${data.van_plate === v.plate ? 'selected' : ''}>${v.plate}${v.label ? ' · ' + v.label : ''}</option>`
+    ).join('');
+
     modal.innerHTML = `
       <div class="modal-header">
-        <span class="modal-title">✎ Update Job Outcome</span>
+        <span class="modal-title">✎ Update Job</span>
         <button class="modal-close" id="cm-close">✕</button>
       </div>
       <div class="modal-body">
         <div class="setup-summary">
-          ${data.van_plate ? `<span class="sum-pill">🚐 ${data.van_plate}</span>` : ''}
           ${data.station ? `<span class="sum-pill">⛽ ${data.station}</span>` : ''}
           ${data.entry   ? `<span class="sum-pill">🚗 ${data.entry}</span>` : ''}
           ${data.tp_km   ? `<span class="sum-pill">📍 ${data.tp_km} km</span>` : ''}
@@ -119,7 +119,15 @@ const Setups = {
         </div>
 
         <div class="form-group">
-          <label class="form-label">New Outcome</label>
+          <label class="form-label">🚐 Van (Account)</label>
+          <select class="form-select" id="cm-van-edit">
+            <option value="">— Select van —</option>
+            ${vanOptions}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Outcome</label>
           <div class="outcome-toggle" id="outcome-toggle">
             <button class="outcome-btn pending active" data-outcome="pending">🚗 En Route</button>
             <button class="outcome-btn reached" data-outcome="reached">🏁 Reached</button>
@@ -167,14 +175,20 @@ const Setups = {
       const pnl = modal.querySelector('#cm-pnl').value;
       const url = modal.querySelector('#cm-url').value.trim();
 
+      const vanEditEl = modal.querySelector('#cm-van-edit');
+      const newVanId    = vanEditEl ? vanEditEl.value : null;
+      const newVanPlate = vanEditEl ? (vanEditEl.selectedOptions[0]?.dataset.plate || null) : null;
+
       const updatedData = { ...data, outcome: currentOutcome, pnl_amount: pnl || null };
+      if (newVanPlate) updatedData.van_plate = newVanPlate;
+
       const btn = modal.querySelector('#cm-save');
       btn.textContent = 'Saving...'; btn.disabled = true;
 
-      const updated = await DB.updateComment(setup.id, {
-        text:      JSON.stringify(updatedData),
-        image_url: url || setup.image_url || null
-      });
+      const commentUpdate = { text: JSON.stringify(updatedData), image_url: url || setup.image_url || null };
+      if (newVanId) commentUpdate.van_id = newVanId;
+
+      const updated = await DB.updateComment(setup.id, commentUpdate);
 
       if (updated) { close(); await Setups.loadSetups(zoneId); Dashboard.refresh(); }
       else { btn.textContent = 'Save Update'; btn.disabled = false; alert('Error updating.'); }
