@@ -64,6 +64,7 @@ const Setups = {
         </div>
       </div>
       <div class="setup-grid">
+        ${data.van_plate ? `<div class="setup-field"><span class="setup-field-label">🚐 Van</span><span class="setup-field-value mono">${data.van_plate}</span></div>` : ''}
         ${data.station ? `<div class="setup-field"><span class="setup-field-label">⛽ Gas Station</span><span class="setup-field-value">${data.station}</span></div>` : ''}
         ${data.entry   ? `<div class="setup-field"><span class="setup-field-label">🚗 Start Driving</span><span class="setup-field-value mono">${data.entry}</span></div>` : ''}
         ${data.lot     ? `<div class="setup-field"><span class="setup-field-label">⛽ Price for Gas (Lot)</span><span class="setup-field-value mono">${data.lot}</span></div>` : ''}
@@ -109,6 +110,7 @@ const Setups = {
       </div>
       <div class="modal-body">
         <div class="setup-summary">
+          ${data.van_plate ? `<span class="sum-pill">🚐 ${data.van_plate}</span>` : ''}
           ${data.station ? `<span class="sum-pill">⛽ ${data.station}</span>` : ''}
           ${data.entry   ? `<span class="sum-pill">🚗 ${data.entry}</span>` : ''}
           ${data.tp_km   ? `<span class="sum-pill">📍 ${data.tp_km} km</span>` : ''}
@@ -196,6 +198,13 @@ const Setups = {
       </div>
       <div class="modal-body">
 
+        <div class="form-group">
+          <label class="form-label">🚐 Van (Account)</label>
+          <select class="form-select" id="cm-van">
+            <option value="">— Select van —</option>
+            ${Vans.getAll().map(v => `<option value="${v.id}" data-plate="${v.plate}">${v.plate}${v.label ? ' · ' + v.label : ''}</option>`).join('')}
+          </select>
+        </div>
         <div class="form-group">
           <label class="form-label">⛽ Gas Station (Entry Zone)</label>
           <select class="form-select" id="cm-station">
@@ -333,16 +342,21 @@ const Setups = {
       const sl_l    = (!isNaN(entryF)&&!isNaN(slF))  ? parseFloat((Math.abs(entryF-slF)/pipSize).toFixed(1)) : null;
       const rr      = (tp_km&&sl_l&&sl_l>0) ? `1:${(tp_km/sl_l).toFixed(2)}` : null;
 
+      const vanEl = modal.querySelector('#cm-van');
+      const vanId = vanEl ? vanEl.value : null;
+      const vanPlate = vanEl ? (vanEl.selectedOptions[0]?.dataset.plate || null) : null;
+
       const data = {
         station: station||null, entry: entry||null, sl: sl||null, tp: tp||null,
         lot: lot||null, tp_km, sl_l, rr,
         outcome: currentOutcome, pnl_amount: pnl||null, notes: notes||null,
+        van_plate: vanPlate||null,
       };
 
       const btn = modal.querySelector('#cm-save');
       btn.textContent='Saving...'; btn.disabled=true;
 
-      const saved = await DB.addComment({ zone_id: zoneId, text: JSON.stringify(data), image_url: url||null });
+      const saved = await DB.addComment({ zone_id: zoneId, text: JSON.stringify(data), image_url: url||null, van_id: vanId||null });
       if (saved) { close(); await Setups.loadSetups(zoneId); Dashboard.refresh(); }
       else { btn.textContent='Log Job'; btn.disabled=false; alert('Error saving job.'); }
     });
