@@ -41,8 +41,11 @@ const Dashboard = {
     const totalTrades = wins + losses + be;
     const winRate = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : '—';
     const netPnl  = totalProfit - totalLoss;
-    const wealth  = parseFloat(localStorage.getItem('zt_wealth') || '0');
-    const balance = wealth + netPnl;
+
+    // Wealth = sum of all van balances
+    const vansData = await Vans.load();
+    const wealth   = vansData.reduce((acc, v) => acc + parseFloat(v.balance || 0), 0);
+    const balance  = wealth + netPnl;
 
     el.innerHTML = `
       <div class="dash-hero">
@@ -64,10 +67,10 @@ const Dashboard = {
 
       <div class="dash-grid">
         <div class="dash-card wealth" id="wealth-card">
-          <div class="dash-card-icon">💰</div>
-          <div class="dash-card-label">Wealth</div>
+          <div class="dash-card-icon">🚐</div>
+          <div class="dash-card-label">Fleet Wealth</div>
           <div class="dash-card-value" id="wealth-value">$${wealth.toLocaleString('en', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
-          <button class="dash-edit-btn" id="wealth-edit-btn">Edit</button>
+          <div class="dash-card-sub">${vansData.length} van${vansData.length!==1?'s':''}</div>
         </div>
         <div class="dash-card profit ${netPnl >= 0 ? 'pos' : 'neg'}">
           <div class="dash-card-icon">${netPnl >= 0 ? '📈' : '📉'}</div>
@@ -116,7 +119,7 @@ const Dashboard = {
             $${balance.toLocaleString('en', {minimumFractionDigits:2, maximumFractionDigits:2})}
           </div>
           <div class="dash-card-sub">
-            Wealth $${wealth.toFixed(2)} ${netPnl >= 0 ? '+' : ''}$${netPnl.toFixed(2)} P&L
+            Fleet $${wealth.toFixed(2)} ${netPnl >= 0 ? '+$' : '-$'}${Math.abs(netPnl).toFixed(2)} P&L
           </div>
         </div>
         <div class="dash-pnl-chart-card">
@@ -136,15 +139,7 @@ const Dashboard = {
 
 
 
-    // Wealth edit
-    document.getElementById('wealth-edit-btn').addEventListener('click', () => {
-      const current = localStorage.getItem('zt_wealth') || '0';
-      const val = prompt('Enter account balance ($):', current);
-      if (val !== null && !isNaN(parseFloat(val))) {
-        localStorage.setItem('zt_wealth', parseFloat(val).toFixed(2));
-        Dashboard.refresh();
-      }
-    });
+    // Wealth comes from fleet vans — edit individual vans in Fleet tab
 
     // Fleet summary
     (async function() {
