@@ -129,16 +129,16 @@ const Setups = {
         <div class="form-group">
           <label class="form-label">Outcome</label>
           <div class="outcome-toggle" id="outcome-toggle">
-            <button class="outcome-btn pending active" data-outcome="pending">🚗 En Route</button>
-            <button class="outcome-btn reached" data-outcome="reached">🏁 Reached</button>
-            <button class="outcome-btn failed"  data-outcome="failed">💥 BumpRoad Hit</button>
-            <button class="outcome-btn refused" data-outcome="refused">↩ BE Refused</button>
+            <button class="outcome-btn pending ${data.outcome==='pending'?'active':''}" data-outcome="pending">🚗 En Route</button>
+            <button class="outcome-btn reached ${data.outcome==='reached'?'active':''}" data-outcome="reached">🏁 Reached</button>
+            <button class="outcome-btn failed  ${data.outcome==='failed'?'active':''}" data-outcome="failed">💥 BumpRoad Hit</button>
+            <button class="outcome-btn refused ${data.outcome==='refused'?'active':''}" data-outcome="refused">↩ BE Refused</button>
           </div>
         </div>
 
-        <div class="form-group" id="pnl-group" style="display:none;">
-          <label class="form-label" id="pnl-label">Amount ($)</label>
-          <input class="form-input" id="cm-pnl" type="number" step="0.01" placeholder="0.00" />
+        <div class="form-group" id="pnl-group" style="display:${data.outcome==='reached'||data.outcome==='failed'?'flex':'none'};">
+          <label class="form-label" id="pnl-label">${data.outcome==='reached'?'💰 Profit ($)':'💸 Loss ($)'}</label>
+          <input class="form-input" id="cm-pnl" type="number" step="0.01" placeholder="0.00" value="${data.pnl_amount||''}" />
         </div>
 
         <div class="form-group">
@@ -152,7 +152,7 @@ const Setups = {
       </div>
     `;
 
-    let currentOutcome = 'pending';
+    let currentOutcome = data.outcome || 'pending';
     modal.querySelectorAll('.outcome-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         currentOutcome = btn.dataset.outcome;
