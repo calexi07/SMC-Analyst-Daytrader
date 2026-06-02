@@ -8,6 +8,7 @@ const App = {
     document.getElementById('nav-dashboard').addEventListener('click', () => this.showDashboard());
     document.getElementById('nav-pairs').addEventListener('click', () => this.showPairsView());
     document.getElementById('nav-deliveries').addEventListener('click', () => Deliveries.show());
+    document.getElementById('nav-vans').addEventListener('click', () => Vans.show());
 
     document.getElementById('notif-bell').addEventListener('click', function(e) {
       e.stopPropagation();
@@ -15,10 +16,13 @@ const App = {
     });
 
     Notifications.init();
+    Vans.load(); // preload vans cache
     Pairs.init();
 
     const lastView = localStorage.getItem('zt_last_view') || 'dashboard';
-    if (lastView === 'pairs') {
+    if (lastView === 'vans') {
+      this.showVansView();
+    } else if (lastView === 'pairs') {
       this.showPairsView();
     } else {
       this.showDashboard();
@@ -66,6 +70,10 @@ const App = {
     dashboard.classList.remove('hidden');
     dashboard.innerHTML = '<div class="loader" style="padding:60px;">Loading zones...</div>';
     await Zones.renderAll(pair);
+  },
+
+  showVansView() {
+    Vans.show();
   },
 
   clearPair() {
