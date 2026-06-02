@@ -32,10 +32,27 @@ const Vans = {
     var container = document.getElementById('vans-view');
     await this.load();
 
+    // Fetch P&L per van
+    var pnlMap = {};
+    if (this._vans.length > 0) {
+      var { data: comments } = await db
+        .from('zone_comments')
+        .select('text, van_id');
+      (comments || []).forEach(function(c) {
+        if (!c.van_id) return;
+        var data = {};
+        try { data = JSON.parse(c.text || '{}'); } catch(e) {}
+        if (!pnlMap[c.van_id]) pnlMap[c.van_id] = 0;
+        var amount = Math.abs(parseFloat(data.pnl_amount || 0));
+        if (data.outcome === 'reached') pnlMap[c.van_id] += amount;
+        if (data.outcome === 'failed')  pnlMap[c.van_id] -= amount;
+      });
+    }
+
     var vansHtml = this._vans.length === 0
       ? '<div class="vans-empty">No vans yet. Add your first trading account.</div>'
       : this._vans.map(function(v) {
-          return Vans._buildVanCard(v);
+          return Vans._buildVanCard(v, pnlMap[v.id] || 0);
         }).join('');
 
     container.innerHTML =
@@ -71,15 +88,30 @@ const Vans = {
     });
   },
 
-  _buildVanCard(v) {
+  _buildVanCard(v, netPnl) {
+    netPnl = netPnl || 0;
+    var initial  = parseFloat(v.balance || 0);
+    var running  = initial + netPnl;
+    var pnlColor = netPnl >= 0 ? 'var(--fresh)' : 'var(--danger)';
+    var pnlSign  = netPnl >= 0 ? '+$' : '-$';
     return '<div class="van-card">' +
       '<div class="van-plate-wrap">' +
         '<div class="van-plate">' + v.plate + '</div>' +
         (v.label ? '<div class="van-label">' + v.label + '</div>' : '') +
       '</div>' +
-      '<div class="van-balance">' +
-        '<span class="van-balance-label">Balance</span>' +
-        '<span class="van-balance-val">$' + parseFloat(v.balance || 0).toLocaleString('en', {minimumFractionDigits:2}) + '</span>' +
+      '<div class="van-balances">' +
+        '<div class="van-balance-row">' +
+          '<span class="van-balance-label">Initial Balance</span>' +
+          '<span class="van-balance-val" style="font-size:18px; color:var(--text);">$' + initial.toLocaleString('en', {minimumFractionDigits:2}) + '</span>' +
+        '</div>' +
+        '<div class="van-balance-row">' +
+          '<span class="van-balance-label">Net P&L</span>' +
+          '<span class="van-balance-val" style="font-size:16px; color:' + pnlColor + ';">' + pnlSign + Math.abs(netPnl).toFixed(2) + '</span>' +
+        '</div>' +
+        '<div class="van-balance-row" style="border-top:1px solid var(--border); padding-top:8px; margin-top:4px;">' +
+          '<span class="van-balance-label" style="font-weight:600; color:var(--text);">Running Balance</span>' +
+          '<span class="van-balance-val" style="font-size:22px; color:' + (running>=initial?'var(--fresh)':'var(--danger)') + ';">$' + running.toLocaleString('en', {minimumFractionDigits:2}) + '</span>' +
+        '</div>' +
       '</div>' +
       '<div class="van-actions">' +
         '<button class="btn btn-secondary btn-sm van-dashboard-btn" data-id="' + v.id + '">📊 Dashboard</button>' +
