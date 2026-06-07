@@ -18,6 +18,20 @@ const DB = {
     return data;
   },
 
+  // Get all zones marked for TradingView (show_tv = true) for a pair
+  async getZonesForPine(pair) {
+    var { data, error } = await db
+      .from('zones')
+      .select('*')
+      .eq('pair', pair)
+      .eq('show_tv', true)
+      .neq('status', 'broken')
+      .order('timeframe', { ascending: true })
+      .order('created_at', { ascending: false });
+    if (error) { console.error('getZonesForPine:', error); return []; }
+    return data || [];
+  },
+
   async addZone(zone) {
     var { data, error } = await db
       .from('zones')

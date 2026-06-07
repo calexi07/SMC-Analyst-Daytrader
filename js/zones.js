@@ -21,6 +21,7 @@ const Zones = {
             <span id="pair-live-price" class="pair-live-price" style="display:none;"></span>
           </div>
           <button class="btn btn-discord btn-sm" id="pair-discord-btn">🔗 Share All Zones</button>
+          <button class="btn btn-pine btn-sm" id="pair-pine-btn" title="Copy Pine String for TradingView">📺 Copy Pine</button>
         </div>
       </div>
       <div class="pending-zones" id="pending-zones-${pair}" style="display:none;"></div>
@@ -112,6 +113,14 @@ const Zones = {
         Zones.openDiscordAllZonesModal(pair);
       });
     }
+
+    // Wire Pine button
+    var pairPineBtn = document.getElementById('pair-pine-btn');
+    if (pairPineBtn) {
+      pairPineBtn.addEventListener('click', function() {
+        Zones.copyPineString(pair);
+      });
+    }
   },
 
   async loadZones(pair, timeframe) {
@@ -177,6 +186,7 @@ const Zones = {
         </div>
         <div class="zone-actions">
           <button class="btn-status-update" data-id="${zone.id}" data-next="${nextStatus[zone.status]}" data-pair="${zone.pair}" data-tf="${zone.timeframe}" title="Update status">${nextLabel[zone.status]}</button>
+          <button class="btn-icon tv-toggle ${zone.show_tv ? 'tv-on' : 'tv-off'}" title="${zone.show_tv ? 'Hide from TradingView' : 'Show in TradingView'}" data-id="${zone.id}" data-tv="${zone.show_tv ? '1' : '0'}">📺</button>
           <button class="btn-icon edit" title="Edit">✎</button>
           <button class="btn-icon del" title="Delete">✕</button>
         </div>
@@ -228,6 +238,22 @@ const Zones = {
     card.querySelector('.btn-icon.del').addEventListener('click', (e) => {
       e.stopPropagation();
       this.confirmDelete(zone);
+    });
+
+    card.querySelector('.btn-icon.tv-toggle').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const btn    = e.currentTarget;
+      const currTv = btn.dataset.tv === '1';
+      const newTv  = !currTv;
+      btn.style.opacity = '0.5';
+      const updated = await DB.updateZone(zone.id, { show_tv: newTv });
+      if (updated) {
+        zone.show_tv = newTv;
+        btn.dataset.tv = newTv ? '1' : '0';
+        btn.className = 'btn-icon tv-toggle ' + (newTv ? 'tv-on' : 'tv-off');
+        btn.title = newTv ? 'Hide from TradingView' : 'Show in TradingView';
+      }
+      btn.style.opacity = '1';
     });
 
     card.querySelector('.btn-add-setup').addEventListener('click', () => {
@@ -754,5 +780,94 @@ const Zones = {
     if (!confirm(`Delete zone "${zone.name}"? This will also remove all comments.`)) return;
     const ok = await DB.deleteZone(zone.id);
     if (ok) await this.loadZones(zone.pair, zone.timeframe);
+  },
+
+  // ── Copy Pine String for TradingView Manual Zones indicator ──
+  async copyPineString(pair) {
+    // Fetch all zones with show_tv = true for this pair
+    const zones = await DB.getZonesForPine(pair);
+
+    if (!zones || zones.length === 0) {
+      alert('No zones marked for TradingView (📺 on).
+
+Click 📺 on zone cards to mark them for TradingView.');
+      return;
+    }
+
+    const decimals = (zones[0].price_top && zones[0].price_top > 100) ? 2 : 5;
+
+    const parts = zones
+      .filter(z => z.price_top && z.price_btm && z.direction)
+      .map(z => {
+        const top = zSafeFloat(z.price_top);
+        const btm = zSafeFloat(z.price_btm);
+        const dir = z.direction; // 'bull' or 'bear'
+        const lbl = z.name.replace(/,/g, ' ').replace(/\|/g, ' ');
+        return `${top.toFixed(decimals)},${btm.toFixed(decimals)},${dir},${lbl}`;
+      });
+
+    if (parts.length === 0) {
+      alert('Marked zones have no price levels set.\nEdit zones to add Top/Bottom prices.');
+      return;
+    }
+
+    const pineStr = parts.join('|');
+
+    // Show modal with copy button
+    const modal   = document.getElementById('comment-modal');
+    const overlay = document.getElementById('modal-overlay');
+
+    modal.innerHTML =
+      '<div class="modal-header">' +
+        '<span class="modal-title">📺 Copy Pine String — ' + pair + '</span>' +
+        '<button class="modal-close" id="pine-close">✕</button>' +
+      '</div>' +
+      '<div class="modal-body">' +
+        '<div style="font-size:12px;color:#888;margin-bottom:8px;">' + parts.length + ' zone(s) marcate cu 📺 Show</div>' +
+        '<div style="font-size:11px;color:#555;margin-bottom:10px;">Pași: Copy → TradingView → indicator "Manual Zones" → Settings → Zone String → Paste</div>' +
+        '<div style="background:#111;border:1px solid #333;border-radius:6px;padding:10px;font-size:10px;color:#888;word-break:break-all;max-height:120px;overflow-y:auto;margin-bottom:12px;">' +
+          pineStr.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+        '</div>' +
+        '<div style="font-size:11px;color:#444;margin-top:8px;">' +
+          parts.map((p,i) => {
+            const f = p.split(',');
+            const col = f[2] === 'bull' ? '#089981' : '#f23645';
+            const arr = f[2] === 'bull' ? '▲' : '▼';
+            return '<div style="padding:4px 0;border-bottom:1px solid #1a1a1a;">' +
+              '<span style="color:' + col + ';">' + arr + ' ' + (f[3]||'') + '</span>' +
+              ' <span style="color:#555;">' + f[0] + ' / ' + f[1] + '</span>' +
+              '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="modal-footer">' +
+        '<button class="btn btn-secondary" id="pine-close2">Close</button>' +
+        '<button class="btn btn-pine" id="pine-copy">📋 Copy Pine String (' + parts.length + ' zone)</button>' +
+      '</div>';
+
+    const close = function() { modal.classList.add('hidden'); overlay.classList.add('hidden'); };
+    modal.querySelector('#pine-close').addEventListener('click', close);
+    modal.querySelector('#pine-close2').addEventListener('click', close);
+    overlay.addEventListener('click', close, { once: true });
+
+    modal.querySelector('#pine-copy').addEventListener('click', async function() {
+      try {
+        await navigator.clipboard.writeText(pineStr);
+      } catch(e) {
+        var ta = document.createElement('textarea');
+        ta.value = pineStr; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); ta.remove();
+      }
+      var btn = modal.querySelector('#pine-copy');
+      btn.textContent = '✅ Copiat! Paste în TradingView Settings';
+      btn.style.background = '#059669';
+      setTimeout(function() {
+        btn.textContent = '📋 Copy Pine String (' + parts.length + ' zone)';
+        btn.style.background = '';
+      }, 3000);
+    });
+
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
   }
 };
