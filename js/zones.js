@@ -99,14 +99,11 @@ const Zones = {
       this.loadZones(pair, tf.key);
     }
 
-    // Render analysis section below zones
     const analysisContainer = document.getElementById(`analysis-section-${pair}`);
     if (analysisContainer) await Analysis.render(pair, analysisContainer);
 
-    // Start live price polling
     Live.startPolling(pair);
 
-    // Wire pair-level Discord button
     var pairDiscordBtn = document.getElementById('pair-discord-btn');
     if (pairDiscordBtn) {
       pairDiscordBtn.addEventListener('click', function() {
@@ -114,7 +111,6 @@ const Zones = {
       });
     }
 
-    // Wire Pine button
     var pairPineBtn = document.getElementById('pair-pine-btn');
     if (pairPineBtn) {
       pairPineBtn.addEventListener('click', function() {
@@ -170,7 +166,6 @@ const Zones = {
     const nextStatus = { fresh: 'tested', tested: 'broken', broken: 'fresh' };
     const nextLabel  = { fresh: '→ Tested', tested: '→ Broken', broken: '→ Fresh' };
 
-    // Direction badge
     const dirHtml = zone.direction
       ? `<span class="zone-dir ${zone.direction}">${zone.direction === 'bull' ? '▲ Bull' : '▼ Bear'}</span>`
       : '';
@@ -264,7 +259,6 @@ const Zones = {
       ZoneAnalysis.openModal(zone.id);
     });
 
-    // Tab switching
     card.querySelectorAll('.zone-tab').forEach(tab => {
       tab.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -287,7 +281,6 @@ const Zones = {
     if (!wasOpen) await Setups.loadSetups(zoneId);
   },
 
-  // ── Get active city names for this pair (non-broken zones) ──
   _getActiveCities(pair) {
     const allLists = ['weekly', 'daily', 'h4'].map(tf => {
       const el = document.getElementById(`zones-${tf}`);
@@ -300,7 +293,6 @@ const Zones = {
       .map(z => z.name);
   },
 
-  // ── Build city dropdown options ──
   _buildCityOptions(pair, direction) {
     const usedCities = this._getActiveCities(pair);
     const available  = Cities.getAvailable(pair, direction, usedCities);
@@ -381,7 +373,6 @@ const Zones = {
       </div>
     `;
 
-    // Direction toggle — rebuild city list on switch
     if (hasCities) {
       let currentDir = 'bull';
       modal.querySelectorAll('.dir-btn').forEach(btn => {
@@ -395,7 +386,6 @@ const Zones = {
           modal.querySelector('#city-hint').textContent = `${count} cities available`;
         });
       });
-      // Initial hint
       const initialCount = Cities.getAvailable(pair, 'bull', this._getActiveCities(pair)).length;
       modal.querySelector('#city-hint').textContent = `${initialCount} cities available`;
     }
@@ -451,7 +441,6 @@ const Zones = {
     const pair    = zone.pair;
     const hasCities = !!PAIR_CITIES[pair];
 
-    // Build city dropdown — include current name even if used
     let cityOptions = '';
     if (hasCities) {
       const dir = zone.direction || 'bull';
@@ -504,13 +493,11 @@ const Zones = {
         <div class="setup-row-2" style="grid-template-columns:1fr 1fr;">
           <div class="form-group">
             <label class="form-label">Price Top</label>
-            <input class="form-input" id="z-top" type="number" step="${priceStep}"
-              value="${zone.price_top || ''}" placeholder="${zone.price_top > 100 ? '73500' : '1.08500'}" />
+            <input class="form-input" id="z-top" type="number" step="${priceStep}" value="${zone.price_top || ''}" placeholder="${zone.price_top > 100 ? '73500' : '1.08500'}" />
           </div>
           <div class="form-group">
             <label class="form-label">Price Bottom</label>
-            <input class="form-input" id="z-btm" type="number" step="${priceStep}"
-              value="${zone.price_btm || ''}" placeholder="${zone.price_btm > 100 ? '73200' : '1.08200'}" />
+            <input class="form-input" id="z-btm" type="number" step="${priceStep}" value="${zone.price_btm || ''}" placeholder="${zone.price_btm > 100 ? '73200' : '1.08200'}" />
           </div>
         </div>
       </div>
@@ -593,7 +580,6 @@ const Zones = {
       lines.push('═══════════════════════════════');
       lines.push('');
 
-      // Group by status
       var groups = [
         { status: 'fresh',  emoji: '🟢', label: 'Fresh'  },
         { status: 'tested', emoji: '🟡', label: 'Tested' },
@@ -613,11 +599,9 @@ const Zones = {
             ? new Date(z.zone_date + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' })
             : '—';
           var tests = (z.status === 'tested' && z.test_count) ? ' ×' + z.test_count : '';
-
           var pricePart = (top || btm)
             ? ' · `' + (top ? top.toFixed(decimals) : '—') + ' / ' + (btm ? btm.toFixed(decimals) : '—') + '`'
             : '';
-
           lines.push(dir + ' **' + z.name + '**' + tests + pricePart + ' · ' + date);
         });
         lines.push('');
@@ -685,7 +669,6 @@ const Zones = {
     var decimals = (zones[0] && zones[0].price_top > 100) ? 2 : 5;
     var now = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
 
-    // Build Discord message
     var lines = [];
     lines.push('# 🚗 The Delivery Man — Zone Report');
     lines.push('## ' + pair + ' · ' + tfLabel + ' Zones');
@@ -710,7 +693,6 @@ const Zones = {
         const btm  = zSafeFloat(z.price_btm);
         const date = z.zone_date ? new Date(z.zone_date + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' }) : '—';
         const tests = z.status === 'tested' && z.test_count ? ' (×' + z.test_count + ')' : '';
-
         lines.push('📍 **' + z.name + '**' + tests + ' — ' + dir);
         if (top || btm) {
           const topStr = top ? top.toFixed(decimals) : '—';
@@ -784,11 +766,10 @@ const Zones = {
 
   // ── Copy Pine String for TradingView Manual Zones indicator ──
   async copyPineString(pair) {
-    // Fetch all zones with show_tv = true for this pair
     const zones = await DB.getZonesForPine(pair);
 
     if (!zones || zones.length === 0) {
-      alert('No zones marked for TradingView (📺 on).\n\nClick 📺 on zone cards to mark them for TradingView.');
+      alert('No zones marked for TradingView. Click the 📺 button on zone cards to mark them.');
       return;
     }
 
@@ -797,21 +778,22 @@ const Zones = {
     const parts = zones
       .filter(z => z.price_top && z.price_btm && z.direction)
       .map(z => {
-        const top = zSafeFloat(z.price_top);
-        const btm = zSafeFloat(z.price_btm);
-        const dir = z.direction; // 'bull' or 'bear'
-        const lbl = z.name.replace(/,/g, ' ').replace(/\|/g, ' ');
+        const t   = zSafeFloat(z.price_top);
+        const b   = zSafeFloat(z.price_btm);
+        const top = Math.max(t, b);
+        const btm = Math.min(t, b);
+        const dir = z.direction;
+        const lbl = z.name.replace(/,/g, ' ').replace(/[|]/g, ' ');
         return `${top.toFixed(decimals)},${btm.toFixed(decimals)},${dir},${lbl}`;
       });
 
     if (parts.length === 0) {
-      alert('Marked zones have no price levels set. Edit zones to add Top/Bottom prices.');
+      alert('Marked zones have no price levels. Edit zones to add Top/Bottom prices.');
       return;
     }
 
     const pineStr = parts.join('|');
 
-    // Show modal with copy button
     const modal   = document.getElementById('comment-modal');
     const overlay = document.getElementById('modal-overlay');
 
@@ -821,18 +803,18 @@ const Zones = {
         '<button class="modal-close" id="pine-close">✕</button>' +
       '</div>' +
       '<div class="modal-body">' +
-        '<div style="font-size:12px;color:#888;margin-bottom:8px;">' + parts.length + ' zone(s) marcate cu 📺 Show</div>' +
-        '<div style="font-size:11px;color:#555;margin-bottom:10px;">Pași: Copy → TradingView → indicator "Manual Zones" → Settings → Zone String → Paste</div>' +
+        '<div style="font-size:12px;color:#888;margin-bottom:8px;">' + parts.length + ' zone(s) marcate cu 📺</div>' +
+        '<div style="font-size:11px;color:#555;margin-bottom:10px;">Copy → TradingView → indicator "Manual Zones" → Settings → Zone String → Paste</div>' +
         '<div style="background:#111;border:1px solid #333;border-radius:6px;padding:10px;font-size:10px;color:#888;word-break:break-all;max-height:120px;overflow-y:auto;margin-bottom:12px;">' +
           pineStr.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
         '</div>' +
         '<div style="font-size:11px;color:#444;margin-top:8px;">' +
-          parts.map((p,i) => {
+          parts.map(function(p) {
             const f = p.split(',');
             const col = f[2] === 'bull' ? '#089981' : '#f23645';
             const arr = f[2] === 'bull' ? '▲' : '▼';
             return '<div style="padding:4px 0;border-bottom:1px solid #1a1a1a;">' +
-              '<span style="color:' + col + ';">' + arr + ' ' + (f[3]||'') + '</span>' +
+              '<span style="color:' + col + ';">' + arr + ' ' + (f[3] || '') + '</span>' +
               ' <span style="color:#555;">' + f[0] + ' / ' + f[1] + '</span>' +
               '</div>';
           }).join('') +
@@ -857,7 +839,7 @@ const Zones = {
         document.execCommand('copy'); ta.remove();
       }
       var btn = modal.querySelector('#pine-copy');
-      btn.textContent = '✅ Copiat! Paste în TradingView Settings';
+      btn.textContent = '✅ Copiat! Paste in TradingView Settings';
       btn.style.background = '#059669';
       setTimeout(function() {
         btn.textContent = '📋 Copy Pine String (' + parts.length + ' zone)';
@@ -868,4 +850,5 @@ const Zones = {
     overlay.classList.remove('hidden');
     modal.classList.remove('hidden');
   }
+
 };
