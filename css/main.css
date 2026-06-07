@@ -2535,3 +2535,45 @@ main { padding: 28px; max-width: 1000px; margin: 0 auto; }
   justify-content: space-between;
   gap: 8px;
 }
+
+
+/* ── Pine TV Button ──────────────────────────────────────── */
+.btn-pine {
+  background: linear-gradient(135deg, #1a2a1a, #0d1f0d);
+  color: #00cc66;
+  border: 1px solid #00cc6644;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-pine:hover {
+  background: linear-gradient(135deg, #1e3a1e, #0f2a0f);
+  border-color: #00cc66aa;
+  color: #00ff88;
+  box-shadow: 0 0 12px #00cc6633;
+}
+
+/* TV toggle button on zone cards */
+.btn-icon.tv-toggle {
+  font-size: 14px;
+  opacity: 0.35;
+  transition: opacity 0.2s, filter 0.2s;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+}
+.btn-icon.tv-toggle.tv-on {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px #00cc66);
+}
+.btn-icon.tv-toggle.tv-off {
+  opacity: 0.3;
+}
+.btn-icon.tv-toggle:hover {
+  opacity: 0.8;
+}
