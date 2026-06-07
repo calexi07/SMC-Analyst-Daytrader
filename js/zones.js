@@ -788,9 +788,7 @@ const Zones = {
     const zones = await DB.getZonesForPine(pair);
 
     if (!zones || zones.length === 0) {
-      alert('No zones marked for TradingView (📺 on).
-
-Click 📺 on zone cards to mark them for TradingView.');
+      alert('No zones marked for TradingView (📺 on).\n\nClick 📺 on zone cards to mark them for TradingView.');
       return;
     }
 
@@ -807,7 +805,7 @@ Click 📺 on zone cards to mark them for TradingView.');
       });
 
     if (parts.length === 0) {
-      alert('Marked zones have no price levels set.\nEdit zones to add Top/Bottom prices.');
+      alert('Marked zones have no price levels set. Edit zones to add Top/Bottom prices.');
       return;
     }
 
